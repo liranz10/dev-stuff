@@ -1,0 +1,16 @@
+{
+  "name": "dev-stuff",
+  "version": "1.0.0",
+  "description": "Dev utilities",
+  "scripts": {
+    "fix-git-bash": "node fix-git-bash-detection.js",
+    "fix-git-bash:dry-run": "node fix-git-bash-detection.js --dry-run"
+  },
+  "bin": {
+    "fix-git-bash": "./fix-git-bash-detection.js"
+  },
+  "engines": {
+    "node": ">=14"
+  },
+  "license": "MIT"
+}
