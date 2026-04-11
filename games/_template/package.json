@@ -1,0 +1,23 @@
+{
+  "name": "game-template",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "ios:sync": "npm run build && npx cap sync ios",
+    "ios:open": "npx cap open ios",
+    "ios:run": "npm run ios:sync && npx cap open ios"
+  },
+  "dependencies": {
+    "phaser": "^3.80.1"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^6.0.0",
+    "@capacitor/core": "^6.0.0",
+    "@capacitor/ios": "^6.0.0",
+    "vite": "^5.2.0"
+  }
+}

@@ -1,0 +1,88 @@
+name: Deploy Games Portal to GitHub Pages
+
+on:
+  push:
+    branches: [main, master, claude/ai-game-studio-setup-ET2u4]
+    paths:
+      - 'portal/**'
+      - 'games/**/dist/**'
+      - '.github/workflows/deploy-portal.yml'
+
+  # Allow manual trigger
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Build all games
+        run: |
+          for game_dir in games/*/; do
+            game_name=$(basename "$game_dir")
+            # Skip the template
+            if [ "$game_name" = "_template" ]; then continue; fi
+            # Build only if package.json exists
+            if [ -f "$game_dir/package.json" ]; then
+              echo "Building game: $game_name"
+              cd "$game_dir"
+              npm ci --silent
+              npm run build --silent
+              cd ../..
+            fi
+          done
+
+      - name: Prepare portal directory
+        run: |
+          mkdir -p _site
+          # Copy portal files
+          cp portal/index.html _site/
+          cp portal/styles.css _site/
+          cp portal/app.js _site/
+          cp portal/games.json _site/
+
+          # Copy each game's build output
+          mkdir -p _site/games
+          for game_dir in games/*/; do
+            game_name=$(basename "$game_dir")
+            if [ "$game_name" = "_template" ]; then continue; fi
+            if [ -d "$game_dir/dist" ]; then
+              echo "Copying game: $game_name"
+              cp -r "$game_dir/dist" "_site/games/$game_name"
+            fi
+          done
+
+          echo "Portal contents:"
+          find _site -type f | head -50
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

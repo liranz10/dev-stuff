@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Yuval & Alma Game Studio 🎮</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header>
+    <div class="header-content">
+      <div class="logo">🎮</div>
+      <div class="header-text">
+        <h1>Yuval &amp; Alma Game Studio</h1>
+        <p class="tagline">משחקים מהנים לילדים ולכולם</p>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <div id="loading" class="loading-state">
+      <div class="spinner"></div>
+      <p>טוען משחקים...</p>
+    </div>
+
+    <div id="empty-state" class="empty-state" style="display:none;">
+      <div class="empty-icon">🌟</div>
+      <h2>משחקים בדרך!</h2>
+      <p>הסטודיו בפיתוח — המשחקים הראשונים יגיעו בקרוב</p>
+    </div>
+
+    <div id="games-grid" class="games-grid" style="display:none;"></div>
+  </main>
+
+  <footer>
+    <p>נבנה עם ❤️ עבור יובל ועלמה • <a href="https://github.com/liranz10/dev-stuff" target="_blank">GitHub</a></p>
+  </footer>
+
+  <!-- Game Preview Modal -->
+  <div id="modal" class="modal" style="display:none;">
+    <div class="modal-backdrop" id="modal-backdrop"></div>
+    <div class="modal-content">
+      <button class="modal-close" id="modal-close">✕</button>
+      <iframe id="modal-iframe" title="Game Preview" allowfullscreen></iframe>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

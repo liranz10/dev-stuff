@@ -1,0 +1,13 @@
+{
+  "appId": "com.gamestudio.GAME_SLUG",
+  "appName": "GAME_NAME",
+  "webDir": "dist",
+  "ios": {
+    "contentInset": "automatic"
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 0
+    }
+  }
+}
