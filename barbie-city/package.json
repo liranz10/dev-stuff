@@ -1,0 +1,18 @@
+{
+  "name": "doll-city",
+  "version": "1.0.0",
+  "description": "Dream Doll City - a cute 3D town game for little kids",
+  "scripts": {
+    "build": "node build.mjs",
+    "dev": "node build.mjs --watch"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "esbuild": "^0.28.2",
+    "postprocessing": "^6.39.5",
+    "three": "^0.170.0"
+  },
+  "private": true
+}
