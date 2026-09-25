@@ -51,7 +51,7 @@ function header(icon, title, onClose) {
   return h('div', { class: 'act-head' },
     h('div', { class: 'act-icon' }, icon),
     h('div', { class: 'act-title' }, title),
-    h('button', { class: 'x-btn', onclick: onClose, 'aria-label': 'close' }, '✕'));
+    h('button', { class: 'x-btn', onclick: onClose, 'aria-label': 'סגירה' }, '✕'));
 }
 
 function bigDone(label, onClick) {

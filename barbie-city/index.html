@@ -1,12 +1,12 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="he" dir="rtl">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#ff5fa2">
-<title>Dream Doll City</title>
+<title>עיר הבובות</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
@@ -44,9 +44,6 @@ button { font-family: inherit; color: inherit; cursor: pointer; border: none; }
 #playBtn { margin-top: 18px; width: 100%; font-size: 32px; font-weight: 700; padding: 16px; border-radius: 26px; color: #fff; background: linear-gradient(180deg, #ff82b8, #ff3d8f); box-shadow: 0 7px 0 #d4287a, 0 12px 24px rgba(255,61,143,.4); animation: pulse 1.6s ease-in-out infinite; }
 #playBtn:active { transform: translateY(5px); box-shadow: 0 2px 0 #d4287a; }
 @keyframes pulse { 50% { transform: scale(1.04); } }
-.lang-pick { display: flex; gap: 10px; justify-content: center; margin-top: 14px; }
-.lang-pick button { font-size: 16px; padding: 8px 16px; border-radius: 16px; background: #fff; border: 3px solid #ffd0e4; }
-.lang-pick button.on { background: var(--soft); border-color: var(--pink); color: var(--hot); font-weight: 700; }
 .hint { font-size: 14px; color: #b56b95; margin-top: 12px; }
 #start { overflow-y: auto; }
 @media (max-height: 620px) {
@@ -59,7 +56,6 @@ button { font-family: inherit; color: inherit; cursor: pointer; border: none; }
   .look .lk-face::before, .look .lk-face::after { top: 7px; }
   #nameInput { font-size: 20px; padding: 6px; }
   #playBtn { margin-top: 10px; font-size: 26px; padding: 10px; }
-  .lang-pick { margin-top: 8px; }
 }
 .look-label { font-weight: 600; font-size: 17px; margin-bottom: 6px; }
 .look-pick { display: flex; justify-content: center; gap: 12px; margin-bottom: 12px; }
@@ -83,7 +79,6 @@ button { font-family: inherit; color: inherit; cursor: pointer; border: none; }
 .round { width: 54px; height: 54px; border-radius: 50%; background: #fff; font-size: 26px; box-shadow: 0 5px 0 rgba(200,60,130,.25), 0 8px 16px rgba(0,0,0,.12); display: grid; place-items: center; font-weight: 700; color: var(--hot); }
 .round:active { transform: translateY(3px); box-shadow: 0 2px 0 rgba(200,60,130,.25); }
 .round.off { opacity: .45; }
-#langBtn { font-size: 18px; }
 #stickerBtn { height: 58px; border-radius: 30px; padding: 0 18px 0 12px; font-size: 26px; background: linear-gradient(180deg, #fff6c4, #ffd24a); box-shadow: 0 5px 0 #e0a820, 0 8px 16px rgba(0,0,0,.12); display: flex; align-items: center; gap: 6px; color: #a0580a; font-weight: 700; }
 #stickerBtn span { font-size: 22px; }
 .top-left { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
@@ -253,7 +248,6 @@ button { font-family: inherit; color: inherit; cursor: pointer; border: none; }
 }
 @media (max-width: 520px) {
   .round { width: 44px; height: 44px; font-size: 21px; }
-  #langBtn { font-size: 15px; }
   .top-right { gap: 5px; }
   #stickerBtn { height: 48px; padding: 0 12px 0 8px; font-size: 20px; }
   #stickerBtn span { font-size: 17px; }
@@ -276,13 +270,12 @@ button { font-family: inherit; color: inherit; cursor: pointer; border: none; }
 <div id="bubbles"></div>
 
 <div id="hud" class="hidden">
-  <div class="top-left"><button id="stickerBtn" aria-label="stickers">⭐ <span id="stickerCount">0/13</span></button><button id="heartBtn" aria-label="magic hearts">💖 <span id="heartCount">0/8</span></button></div>
+  <div class="top-left"><button id="stickerBtn" aria-label="מדבקות">⭐ <span id="stickerCount">0/13</span></button><button id="heartBtn" aria-label="לבבות קסם">💖 <span id="heartCount">0/8</span></button></div>
   <div class="top-right">
-    <button class="round" id="photoBtn" aria-label="photo">📸</button>
-    <button class="round" id="musicBtn" aria-label="music">🎵</button>
-    <button class="round" id="voiceBtn" aria-label="voice">🗣️</button>
-    <button class="round" id="langBtn" aria-label="language">עב</button>
-    <button class="round" id="helpBtn" aria-label="help">?</button>
+    <button class="round" id="photoBtn" aria-label="צילום">📸</button>
+    <button class="round" id="musicBtn" aria-label="מוזיקה">🎵</button>
+    <button class="round" id="voiceBtn" aria-label="קול">🗣️</button>
+    <button class="round" id="helpBtn" aria-label="עזרה">?</button>
   </div>
   <button id="doorBtn"></button>
   <div id="joy"><div class="knob"></div></div>
@@ -293,15 +286,14 @@ button { font-family: inherit; color: inherit; cursor: pointer; border: none; }
 <div id="start">
   <div class="start-card">
     <div class="crown">👑</div>
-    <h1 id="startTitle">Dream Doll City</h1>
-    <div class="sub" id="startSub">A pink little town full of friends!</div>
-    <div class="look-label" id="pickLabel">Pick your doll</div>
+    <h1 id="startTitle">עיר הבובות</h1>
+    <div class="sub" id="startSub">עיירה ורודה ומלאה חברים!</div>
+    <div class="look-label" id="pickLabel">בחרי בובה</div>
     <div class="look-pick" id="lookPick"></div>
-    <label id="nameLabel" for="nameInput">What's your doll's name?</label>
-    <input id="nameInput" maxlength="16" autocomplete="off" placeholder="Bella">
-    <button id="playBtn">▶ Play!</button>
-    <div class="lang-pick"><button data-lang="en">English</button><button data-lang="he">עברית</button></div>
-    <div class="hint">🔊 Sound on! • 👆 Tap to walk</div>
+    <label id="nameLabel" for="nameInput">איך קוראים לבובה שלך?</label>
+    <input id="nameInput" maxlength="16" autocomplete="off" placeholder="בלה">
+    <button id="playBtn">▶ בואי נשחק!</button>
+    <div class="hint">🔊 להדליק צליל! • 👆 לוחצים כדי ללכת</div>
   </div>
 </div>
 

@@ -34,7 +34,7 @@ A cute 3D doll-in-the-city game made for a 5-year-old. She walks around a small 
 - **Tap to walk.** Tap the ground and she walks there. Tap a shop and she walks to the door and goes in. Tap the puppy and he barks and jumps. A big **Go in!** bubble appears at each door.
 - **Nothing to lose.** You can't fail, and a wrong item just wiggles.
 - 📸 takes a photo you can save. 🎵 toggles the cheerful background music.
-- **Language.** You can switch between English and Hebrew (עב/EN button, or on the start screen). Hebrew switches the layout to right-to-left.
+- **Language.** The game is in Hebrew, laid out right-to-left. That covers every screen, speech bubble, spoken line and shop sign.
 - **Name.** You pick the doll's name on the start screen. Progress, outfits and stickers are saved on the device.
 
 ## Controls
@@ -69,6 +69,6 @@ Source is in `src/`:
 - `quests.js`: magic hearts and the rainbow ring course
 - `textures.js`: signs, face and patterns, drawn on canvases
 - `audio.js`: synthesized sound effects, music and voice
-- `i18n.js`: all the text in English and Hebrew
+- `i18n.js`: all the game's text (Hebrew)
 
 There are no image or sound files: everything is drawn and synthesized in code. Static town meshes are merged per material to keep draw calls low, and the resolution drops automatically on slower tablets.

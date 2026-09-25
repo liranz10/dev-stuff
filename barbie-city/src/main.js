@@ -19,7 +19,9 @@ function persist() {
     localStorage.setItem(SAVE_KEY, JSON.stringify(save));
   } catch (e) { /* ignore */ }
 }
-let L = LANGS[save.lang] || LANGS.en;
+// the game is Hebrew only
+save.lang = 'he';
+let L = LANGS.he;
 const playerName = () => save.name || L.defaultName;
 
 // ------------------------------------------------------------ renderer + scene
@@ -422,7 +424,6 @@ const musicBtn = document.getElementById('musicBtn');
 musicBtn.onclick = () => { initAudio(); setMusic(!isMusicOn()); musicBtn.classList.toggle('off', !isMusicOn()); sfx.tap(); };
 const voiceBtn = document.getElementById('voiceBtn');
 voiceBtn.onclick = () => { setVoice(!isVoiceOn()); voiceBtn.classList.toggle('off', !isVoiceOn()); sfx.tap(); };
-document.getElementById('langBtn').onclick = () => { setLang(save.lang === 'en' ? 'he' : 'en'); sfx.tap(); };
 document.getElementById('helpBtn').onclick = showHelp;
 function showHelp() {
   sfx.pop();
@@ -455,7 +456,6 @@ function setLang(code) {
   document.documentElement.lang = code;
   document.documentElement.dir = L.dir;
   world.refreshSigns(L);
-  document.getElementById('langBtn').textContent = code === 'en' ? 'עב' : 'EN';
   const t = document.getElementById('startTitle'); if (t) t.textContent = L.title;
   const pl = document.getElementById('pickLabel'); if (pl) pl.textContent = L.pickDoll;
   const st = document.getElementById('startSub'); if (st) st.textContent = L.subtitle;
@@ -886,9 +886,7 @@ function startGame() {
 document.getElementById('playBtn').onclick = startGame;
 document.getElementById('nameInput').value = save.name || '';
 document.getElementById('nameInput').addEventListener('keydown', e => { if (e.key === 'Enter') startGame(); });
-document.querySelectorAll('.lang-pick button').forEach(b => b.onclick = () => { setLang(b.dataset.lang); document.querySelectorAll('.lang-pick button').forEach(x => x.classList.toggle('on', x === b)); sfx.tap(); });
-document.querySelectorAll('.lang-pick button').forEach(x => x.classList.toggle('on', x.dataset.lang === save.lang));
-setLang(save.lang);
+setLang('he');
 updateStickerCount();
 
 // pick your doll
@@ -900,7 +898,7 @@ const LOOKS = [
 ];
 const lookRow = document.getElementById('lookPick');
 LOOKS.forEach((lk, i) => {
-  const b = h('button', { class: 'look' + (i === (save.doll ? -1 : 0) ? ' on' : ''), 'aria-label': 'doll ' + (i + 1), style: { '--hair': lk.hair, '--skin': lk.skin, '--dress': lk.color } }, h('span', { class: 'lk-hair' }), h('span', { class: 'lk-face' }), h('span', { class: 'lk-dress' }));
+  const b = h('button', { class: 'look' + (i === (save.doll ? -1 : 0) ? ' on' : ''), 'aria-label': 'בובה ' + (i + 1), style: { '--hair': lk.hair, '--skin': lk.skin, '--dress': lk.color } }, h('span', { class: 'lk-hair' }), h('span', { class: 'lk-face' }), h('span', { class: 'lk-dress' }));
   b.onclick = () => {
     initAudio();
     lookRow.querySelectorAll('.look').forEach(x => x.classList.toggle('on', x === b));
