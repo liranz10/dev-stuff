@@ -1,7 +1,8 @@
 // Bundles the game into ONE self-contained HTML file: dist/index.html
 // (three.js included, so it also works offline / from a double-click).
 import * as esbuild from 'esbuild';
-import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdirSync, cpSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 
 const watch = process.argv.includes('--watch');
 
@@ -19,6 +20,10 @@ async function build() {
   const html = readFileSync('index.html', 'utf8').replace('<!--GAME-->', () => `<script>${js}</script>`);
   mkdirSync('dist', { recursive: true });
   writeFileSync('dist/index.html', html);
+  // app files for installing on a tablet (manifest, icons, offline service worker)
+  cpSync('public', 'dist', { recursive: true });
+  const version = createHash('sha1').update(html).digest('hex').slice(0, 10);
+  writeFileSync('dist/sw.js', readFileSync('public/sw.js', 'utf8').replace('__VERSION__', version));
   // Page body for hosts that supply their own <html>/<head> wrapper (e.g. a claude.ai artifact).
   // Only the document head is rewritten: the script must stay byte-for-byte intact
   // (three.js shader code contains strings like "#include <metalnessmap_fragment>").
@@ -26,7 +31,8 @@ async function build() {
   const head = html.slice(0, cut)
     .replace(/<!DOCTYPE html>\s*<html[^>]*>\s*<head>\s*/i, '')
     .replace(/<meta[^>]*>\s*/g, '')
-    .replace(/<title>[^<]*<\/title>\s*/, '');
+    .replace(/<title>[^<]*<\/title>\s*/, '')
+    .replace(/<link rel="(manifest|apple-touch-icon|icon)"[^>]*>\s*/g, '');
   const title = (html.match(/<title>[^<]*<\/title>/) || [''])[0];
   const body = html.slice(cut).replace('</head>\n<body>\n', '').replace(/<\/body>\s*<\/html>\s*$/, '');
   writeFileSync('dist/embed.html', `${title}\n${head}${body}`);

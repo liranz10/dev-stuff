@@ -4,6 +4,21 @@ A cute 3D doll-in-the-city game made for a 5-year-old. She walks around a small 
 
 **To play:** open `dist/index.html` in any modern browser (tablet, phone or computer). It's one self-contained file that also works offline, so you can copy it to an iPad or Android tablet and open it there.
 
+## העלאה ל-Vercel והתקנה על האייפד
+
+**חד-פעמי, ב-Vercel (חינם):**
+1. נכנסים ל-https://vercel.com/new ומתחברים עם GitHub.
+2. בוחרים את המאגר `dev-stuff` ולוחצים **Import**. אם הוא לא מופיע, לוחצים "Adjust GitHub App Permissions" ומאשרים גישה אליו.
+3. ב-**Root Directory** לוחצים Edit ובוחרים `barbie-city`. את שאר ההגדרות ממלא הקובץ `vercel.json`.
+4. לוחצים **Deploy**. אחרי דקה בערך מתקבלת כתובת, למשל `https://dev-stuff-xxxx.vercel.app`.
+5. חשוב: המשחק נמצא בענף `claude/barbie-city-3d-game-2uj35v`, לא בענף הראשי של המאגר. ב-Vercel הולכים ל-**Settings ← Environments ← Production** ומגדירים את הענף הזה כ-Production Branch. אחר כך עושים **Redeploy**. (אם יש מסך התחברות בכתובת, זו הגנת התצוגה המקדימה של Vercel. אחרי שהענף מוגדר כ-Production הכתובת הראשית פתוחה.)
+
+**על האייפד:**
+1. פותחים את הכתובת ב-**Safari**.
+2. לוחצים על כפתור השיתוף (ריבוע עם חץ למעלה) ← **הוספה למסך הבית** ← **הוספה**.
+3. מופיע אייקון "עיר הבובות" במסך הבית. המשחק נפתח במסך מלא, בלי שורת כתובת.
+4. אחרי הפתיחה הראשונה המשחק עובד גם **בלי אינטרנט**. כשמעלים גרסה חדשה, היא נטענת אוטומטית בפעם הבאה שיש חיבור.
+
 ## What's in the town
 
 | Place | What you do there |
