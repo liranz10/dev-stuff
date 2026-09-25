@@ -2,6 +2,8 @@
 
 A cute 3D doll-in-the-city game made for a 5-year-old. She walks around a small pink town with her puppy **Coco**, meets friends, visits the shops, and drives her pink convertible.
 
+**🎮 לשחק עכשיו:** https://doll-city.vercel.app (באייפד: Safari ← שיתוף ← הוספה למסך הבית)
+
 **To play:** open `dist/index.html` in any modern browser (tablet, phone or computer). It's one self-contained file that also works offline, so you can copy it to an iPad or Android tablet and open it there.
 
 ## העלאה ל-Vercel והתקנה על האייפד
