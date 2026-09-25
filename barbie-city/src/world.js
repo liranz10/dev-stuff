@@ -83,16 +83,42 @@ export class World {
   // ---------------- sky / ground ----------------
   buildSkyAndGround() {
     this.skyUniforms = {
-      top: { value: new THREE.Color('#7ec8ff') },
-      mid: { value: new THREE.Color('#bfe6ff') },
-      bottom: { value: new THREE.Color('#ffe0ef') },
+      top: { value: new THREE.Color('#5fb4ff') },
+      mid: { value: new THREE.Color('#b9e4ff') },
+      bottom: { value: new THREE.Color('#ffe3f0') },
+      sunDir: { value: new THREE.Vector3(18, 30, 22).normalize() },
+      sunColor: { value: new THREE.Color('#fff0dc') },
+      night: { value: 0 },
+      time: { value: 0 },
     };
-    const sky = new THREE.Mesh(new THREE.SphereGeometry(450, 32, 16), new THREE.ShaderMaterial({
+    // painted sky: gradient + glowing sun (bright enough to bloom) + soft drifting clouds
+    this.skyMat = new THREE.ShaderMaterial({
       uniforms: this.skyUniforms,
       side: THREE.BackSide, depthWrite: false, fog: false,
       vertexShader: 'varying vec3 vP; void main(){ vP = normalize(position); gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.0); }',
-      fragmentShader: 'uniform vec3 top; uniform vec3 mid; uniform vec3 bottom; varying vec3 vP; void main(){ float h = vP.y; vec3 c = h > 0.15 ? mix(mid, top, smoothstep(0.15, 0.7, h)) : mix(bottom, mid, smoothstep(-0.05, 0.15, h)); gl_FragColor = vec4(c,1.0);\n#include <colorspace_fragment>\n}',
-    }));
+      fragmentShader: `uniform vec3 top; uniform vec3 mid; uniform vec3 bottom; uniform vec3 sunDir; uniform vec3 sunColor; uniform float night; uniform float time; varying vec3 vP;
+float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+float noise(vec2 p){ vec2 i = floor(p), f = fract(p); vec2 u = f*f*(3.0-2.0*f);
+  return mix(mix(hash(i), hash(i+vec2(1,0)), u.x), mix(hash(i+vec2(0,1)), hash(i+vec2(1,1)), u.x), u.y); }
+float fbm(vec2 p){ float v = 0.0, a = 0.5; for (int i = 0; i < 5; i++){ v += a*noise(p); p *= 2.03; a *= 0.5; } return v; }
+void main(){
+  vec3 d = normalize(vP); float h = d.y;
+  vec3 c = h > 0.15 ? mix(mid, top, smoothstep(0.15, 0.75, h)) : mix(bottom, mid, smoothstep(-0.05, 0.15, h));
+  float s = max(dot(d, normalize(sunDir)), 0.0);
+  float day = 1.0 - night;
+  c += sunColor * (pow(s, 6.0) * 0.22 + pow(s, 60.0) * 0.7) * day;
+  c += sunColor * smoothstep(0.9975, 0.9988, s) * 7.0 * day;
+  if (h > 0.0) {
+    vec2 uv = d.xz / (h + 0.18) * 1.3 + vec2(time * 0.012, time * 0.004);
+    float cl = smoothstep(0.52, 0.86, fbm(uv));
+    vec3 cc = mix(vec3(1.0, 0.97, 0.99) + sunColor * pow(s, 4.0) * 0.4, vec3(0.32, 0.3, 0.52), night);
+    c = mix(c, cc, cl * smoothstep(0.0, 0.2, h) * 0.85);
+  }
+  gl_FragColor = vec4(c, 1.0);
+#include <colorspace_fragment>
+}`,
+    });
+    const sky = new THREE.Mesh(new THREE.SphereGeometry(450, 32, 16), this.skyMat);
     sky.renderOrder = -10;
     this.add(sky);
     this.sky = sky;
@@ -910,7 +936,8 @@ export class World {
   }
 
   setNight(n) {
-    const day = { top: new THREE.Color('#7ec8ff'), mid: new THREE.Color('#bfe6ff'), bottom: new THREE.Color('#ffe0ef') };
+    const day = { top: new THREE.Color('#5fb4ff'), mid: new THREE.Color('#b9e4ff'), bottom: new THREE.Color('#ffe3f0') };
+    this.skyUniforms.night.value = n;
     const night = { top: new THREE.Color('#0b1236'), mid: new THREE.Color('#2a2a6a'), bottom: new THREE.Color('#6a3a7a') };
     for (const k of ['top', 'mid', 'bottom']) this.skyUniforms[k].value.copy(day[k]).lerp(night[k], n);
     this.starMat.opacity = n;
@@ -918,10 +945,10 @@ export class World {
     for (const r of this.rainbow.children) r.material.opacity = 0.55 * (1 - n);
     this.cloudMat.emissiveIntensity = 0.25 * (1 - n);
     for (const { m, day: d, night: nt } of this.nightMats) m.emissiveIntensity = d + (nt - d) * n;
-    for (const L of this.lampLights) L.intensity = n * 25;
+    for (const L of this.lampLights) L.intensity = n * 40;
   }
 
-  update(dt, t) { for (const a of this.animators) a(dt, t); }
+  update(dt, t) { this.skyUniforms.time.value = t; for (const a of this.animators) a(dt, t); }
 }
 
 function mergeGeos(geos) {

@@ -2,6 +2,20 @@ import * as THREE from 'three';
 import { faceTex, hairTex, glitterTex, plateTex, lighten } from './textures.js';
 
 // ---------------- shared helpers ----------------
+// Degenerate triangles (lathe poles, extrude corners) can leave zero-length normals, which turn into
+// NaN pixels in the shader (and bloom would smear them into black blocks). Patch them to point up.
+export function fixNormals(root) {
+  root.traverse(o => {
+    const n = o.isMesh && o.geometry.attributes.normal;
+    if (!n || n.userData?.fixed) return;
+    for (let i = 0; i < n.count; i++) {
+      const x = n.getX(i), y = n.getY(i), z = n.getZ(i);
+      if (!(x * x + y * y + z * z > 1e-8)) n.setXYZ(i, 0, 1, 0);
+    }
+    n.userData = { fixed: true };
+    n.needsUpdate = true;
+  });
+}
 const matCache = new Map();
 export function mat(color, opts = {}) {
   const key = color + JSON.stringify(opts);
@@ -221,6 +235,7 @@ export class Doll {
     this.buildHair();
     this.buildAccessories();
     this.setHold(this.holdItem);
+    fixNormals(this.root);
   }
 
   buildHair() {
@@ -429,6 +444,33 @@ export class Doll {
       this.arms[0].elbow.add(bag);
       this.bagObj = bag;
     } else this.bagObj = null;
+    if (a.wings) {
+      // sparkly fairy wings (reward for finding all the magic hearts)
+      const wm = new THREE.MeshPhysicalMaterial({ color: '#ffb8ec', emissive: '#ff7ad0', emissiveIntensity: 0.55, transparent: true, opacity: 0.78, roughness: 0.15, iridescence: 1, iridescenceIOR: 1.6, side: THREE.DoubleSide, depthWrite: false });
+      const rim = mat('#fff0fb', { emissive: '#ffd6f5', emissiveIntensity: 2.2 });
+      const wg = new THREE.Group();
+      wg.position.set(0, 1.12, -0.11);
+      this.wingParts = [];
+      for (const s of [-1, 1]) {
+        const side = new THREE.Group();
+        for (const [w, h, y, rz] of [[0.27, 0.44, 0.13, 0.55], [0.17, 0.28, -0.17, -0.5]]) {
+          const wing = new THREE.Mesh(new THREE.CircleGeometry(1, 32), wm);
+          wing.scale.set(w, h, 1);
+          wing.position.set(s * (w * 0.85), y, 0);
+          wing.rotation.z = s * rz;
+          wing.renderOrder = 3;
+          side.add(wing);
+          const edge = new THREE.Mesh(new THREE.TorusGeometry(1, 0.035, 6, 40), rim);
+          edge.scale.set(w, h, 1); edge.position.copy(wing.position); edge.rotation.z = wing.rotation.z;
+          side.add(edge);
+        }
+        for (let i = 0; i < 5; i++) { const sp = ball(0.012, rim, 1, 1, 1, true); sp.position.set(s * (0.08 + Math.random() * 0.25), -0.15 + Math.random() * 0.45, 0.01); side.add(sp); }
+        side.rotation.y = s * -0.35;
+        wg.add(side);
+        this.wingParts.push({ g: side, s });
+      }
+      this.accBody.add(wg);
+    } else this.wingParts = null;
     if (a.balloon) {
       const bl = new THREE.Group();
       const colors = ['#ff5fa2', '#8fd8ff', '#ffe14f', '#b07cff'];
@@ -540,6 +582,10 @@ export class Doll {
       if (this.dance <= 0) this.body.rotation.y = 0;
     }
 
+    if (this.wingParts) {
+      const f = Math.sin(performance.now() / (moving ? 110 : 380)) * (moving ? 0.35 : 0.18);
+      for (const w of this.wingParts) w.g.rotation.y = w.s * (-0.35 - f);
+    }
     // hair sway
     for (const s of this.swingers) {
       const v = Math.sin(p * (s.axis === 'z' ? 1 : 2)) * s.amp * (0.3 + sw);
@@ -785,6 +831,7 @@ export class Car {
     while (this.root.children.length) wrap.add(this.root.children[0]);
     wrap.rotation.y = -Math.PI / 2;
     this.root.add(wrap);
+    fixNormals(this.root);
     this.wrap = wrap;
     this.seatDriver = new THREE.Vector3(-0.33, 0.55, -0.28 - 0.05); // in wrap coords (z = left seat)
   }

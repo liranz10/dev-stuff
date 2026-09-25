@@ -1,14 +1,16 @@
 import * as THREE from 'three';
 import { World } from './world.js';
-import { Doll, Puppy, Car, SKIN, HAIR_COLORS } from './characters.js';
+import { Doll, Puppy, Car, SKIN, HAIR_COLORS, fixNormals } from './characters.js';
 import { heartTex, starTex, noteTex, canvasTex, setMaxAniso, FONT } from './textures.js';
 import { initAudio, sfx, say, setMusic, isMusicOn, setVoice, isVoiceOn, setEngine } from './audio.js';
 import { LANGS, FRIEND_NAMES } from './i18n.js';
 import { ACTIVITIES, h } from './activities.js';
+import { Pipeline, bakeEnvironment, autoPreset, PRESETS } from './render.js';
+import { MagicHearts, RingCourse } from './quests.js';
 
 // ------------------------------------------------------------ saved state
 const SAVE_KEY = 'dream-doll-city-v1';
-let save = { lang: 'en', name: '', doll: null, puppy: null, stickers: {}, met: {} };
+let save = { lang: 'en', name: '', doll: null, puppy: null, stickers: {}, met: {}, hearts: [], quality: null, look: 0 };
 try { const s = JSON.parse(localStorage.getItem(SAVE_KEY)); if (s) save = { ...save, ...s }; } catch (e) { /* private mode */ }
 function persist() {
   try {
@@ -22,19 +24,18 @@ const playerName = () => save.name || L.defaultName;
 
 // ------------------------------------------------------------ renderer + scene
 const canvas = document.getElementById('game');
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance', preserveDrawingBuffer: false });
+// antialiasing is done by SMAA in the post-processing chain (see render.js)
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, stencil: false, powerPreference: 'high-performance', preserveDrawingBuffer: false });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.05;
 setMaxAniso(Math.min(8, renderer.capabilities.getMaxAnisotropy()));
 
 const scene = new THREE.Scene();
 scene.fog = new THREE.Fog('#ffe6f2', 70, 260);
 const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 1000);
 
-const hemi = new THREE.HemisphereLight('#dff1ff', '#ffd6e8', 1.5);
+const hemi = new THREE.HemisphereLight('#dff1ff', '#ffd6e8', 1.0);
 scene.add(hemi);
 const sun = new THREE.DirectionalLight('#fff2e0', 2.8);
 sun.castShadow = true;
@@ -45,9 +46,18 @@ sun.shadow.camera.near = 1; sun.shadow.camera.far = 120;
 sun.shadow.bias = -0.0004;
 sun.shadow.normalBias = 0.03;
 scene.add(sun, sun.target);
-const SUN_OFF = new THREE.Vector3(18, 34, 14);
+const SUN_OFF = new THREE.Vector3(18, 30, 22);
 
 const world = new World(scene, L);
+
+fixNormals(world.root);
+// sky reflections on everything shiny + the cinematic post-processing chain
+const envRT = bakeEnvironment(renderer, world.skyMat, 128);
+scene.environment = envRT.texture;
+scene.environmentIntensity = 0.45;
+const pipeline = new Pipeline(renderer, scene, camera, sun);
+let quality = PRESETS[save.quality] ? save.quality : autoPreset();
+pipeline.apply(quality);
 
 // ------------------------------------------------------------ characters
 const DEFAULT_DOLL = { skin: SKIN.fair, hair: HAIR_COLORS.blonde, hairStyle: 'long', outfit: 'dress', color: '#ff5fa2', color2: '#ffffff', shoes: '#ff3d8f', eye: '#3a8fe0', lips: '#ff4f9a', nails: '#ff3d8f', bowColor: '#ff3d8f', acc: { necklace: true, earrings: '#ffffff' } };
@@ -89,7 +99,8 @@ const TEX = { heart: heartTex(), star: starTex(), note: noteTex(), bubble: canva
 const particles = [];
 function burst(pos, kind = 'heart', n = 8) {
   for (let i = 0; i < n; i++) {
-    const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: TEX[kind], transparent: true, depthWrite: false }));
+    const glow = kind === 'star' ? 2.4 : kind === 'heart' ? 1.35 : 1;
+    const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: TEX[kind], color: new THREE.Color(glow, glow, glow), transparent: true, depthWrite: false }));
     s.position.copy(pos).add(new THREE.Vector3((Math.random() - 0.5) * 0.6, Math.random() * 0.4, (Math.random() - 0.5) * 0.6));
     const sc = kind === 'bubble' ? 0.15 + Math.random() * 0.2 : 0.22 + Math.random() * 0.15;
     s.scale.setScalar(sc);
@@ -168,18 +179,20 @@ function updateCamera(dt) {
 function resize() {
   const w = window.innerWidth, hh = window.innerHeight;
   renderer.setSize(w, hh, false);
+  pipeline.setSize(w, hh);
   camera.aspect = w / hh;
   camera.fov = w < hh ? 62 : 50;
   applyViewOffset();
 }
 function applyViewOffset() {
   const w = window.innerWidth, hh = window.innerHeight;
-  const card = document.querySelector('.act-card.sheet');
-  if (card && cam.closeup) {
-    const r = card.getBoundingClientRect();
-    const side = r.height > hh * 0.8; // docked on the side (landscape)
-    const ox = side ? (dirRTL() ? -r.width / 2 : r.width / 2) : 0;
-    const oy = side ? 0 : r.height / 2;
+  // keep the doll in the part of the screen the panel doesn't cover
+  const card = mode === 'start' ? document.querySelector('#start .start-card') : document.querySelector('.act-card.sheet');
+  if (card && (cam.closeup || mode === 'start')) {
+    const side = window.matchMedia('(min-aspect-ratio: 5/4)').matches; // docked on the side (landscape)
+    const cw = card.offsetWidth, ch = card.offsetHeight;
+    const ox = side ? (dirRTL() ? -cw / 2 : cw / 2) : 0;
+    const oy = side ? 0 : Math.min(ch, hh * 0.62) / 2;
     camera.setViewOffset(w, hh, ox, oy, w, hh);
   } else camera.clearViewOffset();
   camera.updateProjectionMatrix();
@@ -329,8 +342,8 @@ const bubbles = document.getElementById('bubbles');
 const toastEl = document.getElementById('toast');
 const actionBar = document.getElementById('actions');
 const doorBtn = document.getElementById('doorBtn');
-const STICKERS = ['cafe', 'market', 'hair', 'nails', 'boutique', 'icecream', 'pets', 'home', 'park', 'drive', 'friends'];
-const STICKER_ICON = { ...L.icon, drive: '🚗', friends: '💕' };
+const STICKERS = ['cafe', 'market', 'hair', 'nails', 'boutique', 'icecream', 'pets', 'home', 'park', 'drive', 'rings', 'hearts', 'friends'];
+const STICKER_ICON = { ...L.icon, drive: '🚗', friends: '💕', rings: '🌈', hearts: '🧚' };
 
 function toast(text, ms = 2600) {
   toastEl.textContent = text;
@@ -373,7 +386,7 @@ function showStickerBook() {
   const grid = h('div', { class: 'book-grid' });
   for (const s of STICKERS) {
     const got = save.stickers[s];
-    const label = s === 'drive' ? L.drive : s === 'friends' ? L.allFriends : L.shop[s];
+    const label = s === 'drive' ? L.drive : s === 'friends' ? L.allFriends : s === 'rings' ? L.ringsSticker : s === 'hearts' ? L.heartsSticker : L.shop[s];
     grid.append(h('div', { class: 'book-slot' + (got ? ' got' : '') }, h('div', { class: 'bs-icon' }, got ? STICKER_ICON[s] : '?'), h('div', { class: 'bs-name' }, label)));
   }
   const friends = h('div', { class: 'friend-row' }, ...npcs.map(n => h('div', { class: 'friend' + (save.met[n.id] ? ' met' : '') }, h('div', { class: 'fr-dot', style: { background: n.cfg.color === '#ffffff' ? (n.cfg.acc?.apron || n.cfg.color2) : n.cfg.color } }, save.met[n.id] ? '♥' : '?'), h('div', { class: 'fr-name' }, FRIEND_NAMES[save.lang][n.id]))));
@@ -389,8 +402,11 @@ function takePhoto() {
   sfx.camera();
   const flash = h('div', { class: 'flash' }); document.body.append(flash); setTimeout(() => flash.remove(), 600);
   // hide bubbles are HTML so they aren't in the shot; render and grab immediately
-  renderer.render(scene, camera);
+  const hadFocus = pipeline.focus;
+  if (!hadFocus) pipeline.setFocus(mode === 'drive' ? car.root : player.root, mode === 'drive' ? 1 : 1.2);
+  pipeline.render(0);
   const shot = renderer.domElement.toDataURL('image/png');
+  if (!hadFocus) pipeline.setFocus(null);
   const img = h('img', { src: shot, alt: 'photo' });
   const ov = h('div', { class: 'overlay' });
   const a = h('a', { class: 'big-btn done-btn', href: shot, download: 'dream-doll-city.png' }, '💾 ', L.save);
@@ -407,7 +423,30 @@ musicBtn.onclick = () => { initAudio(); setMusic(!isMusicOn()); musicBtn.classLi
 const voiceBtn = document.getElementById('voiceBtn');
 voiceBtn.onclick = () => { setVoice(!isVoiceOn()); voiceBtn.classList.toggle('off', !isVoiceOn()); sfx.tap(); };
 document.getElementById('langBtn').onclick = () => { setLang(save.lang === 'en' ? 'he' : 'en'); sfx.tap(); };
-document.getElementById('helpBtn').onclick = () => { toast(L.help, 4500); say(L.help.replace(/•/g, ','), { lang: L.code }); };
+document.getElementById('helpBtn').onclick = showHelp;
+function showHelp() {
+  sfx.pop();
+  say(L.help.replace(/•/g, ','), { lang: L.code });
+  const ov = h('div', { class: 'overlay' });
+  const qRow = h('div', { class: 'chips' }, ...['low', 'medium', 'high'].map(q => {
+    const b = h('button', { class: 'chip' + (q === quality ? ' on' : '') }, h('span', { class: 'ci' }, q === 'low' ? '🐢' : q === 'medium' ? '🙂' : '✨'), h('span', { class: 'cl' }, L.quality[q]));
+    b.onclick = () => { setQuality(q); qRow.querySelectorAll('.chip').forEach(x => x.classList.toggle('on', x === b)); sfx.tap(); };
+    return b;
+  }));
+  const card = h('div', { class: 'act-card' },
+    h('div', { class: 'act-head' }, h('div', { class: 'act-icon' }, '💡'), h('div', { class: 'act-title' }, L.helpTitle), h('button', { class: 'x-btn', onclick: () => ov.remove() }, '✕')),
+    h('div', { class: 'act-body' },
+      ...L.helpLines.map(([i, t]) => h('div', { class: 'help-line' }, h('span', { class: 'hl-i' }, i), h('span', {}, t))),
+      h('div', { class: 'row-label' }, '🖼️ ', L.qualityLabel), qRow));
+  ov.append(card);
+  ov.addEventListener('click', e => { if (e.target === ov) ov.remove(); });
+  document.body.append(ov);
+}
+function setQuality(q) {
+  quality = q; save.quality = q; persist();
+  pipeline.apply(q); resize();
+  perf.frames = 0; perf.time = 0; perf.grace = 6;
+}
 
 function setLang(code) {
   save.lang = code;
@@ -418,6 +457,7 @@ function setLang(code) {
   world.refreshSigns(L);
   document.getElementById('langBtn').textContent = code === 'en' ? 'עב' : 'EN';
   const t = document.getElementById('startTitle'); if (t) t.textContent = L.title;
+  const pl = document.getElementById('pickLabel'); if (pl) pl.textContent = L.pickDoll;
   const st = document.getElementById('startSub'); if (st) st.textContent = L.subtitle;
   const nl = document.getElementById('nameLabel'); if (nl) nl.textContent = L.nameLabel;
   const ni = document.getElementById('nameInput'); if (ni && wasDefault) ni.placeholder = L.defaultName;
@@ -506,7 +546,8 @@ function enterCar() {
   car.root.add(puppy.root);
   const s1 = car.seatPos(1); puppy.root.position.set(s1.x, 0.5, s1.z + 0.1);
   burst(car.root.position.clone().add(new THREE.Vector3(0, 1.5, 0)), 'star', 10);
-  setTimeout(() => speak(car.root, L.carLine, 1.3, 2.4), 300);
+  rings.start();
+  setTimeout(() => speak(car.root, L.carLine + ' ' + L.ringHint, 1.3, 2.4), 300);
 }
 function exitCar() {
   if (mode !== 'drive') return;
@@ -514,6 +555,7 @@ function exitCar() {
   sfx.door();
   setEngine(0);
   carState.speed = 0; driveTarget = null;
+  rings.stop();
   car.root.remove(player.root); car.root.remove(puppy.root);
   scene.add(player.root); scene.add(puppy.root);
   player.sitting = false;
@@ -562,6 +604,7 @@ function openActivity(id) {
     closeup: (kind) => {
       const conf = { face: { lookY: 1.55, dist: 1.5, up: 0.12 }, body: { lookY: 0.9, dist: 3.1, up: 0.35 }, puppy: { lookY: 0.4, dist: 1.8, up: 0.5 } }[kind];
       cam.closeup = { kind, ...conf };
+      pipeline.setFocus(kind === 'puppy' ? puppy.root : player.root, conf.lookY);
       if (kind === 'puppy') {
         const f = new THREE.Vector3(Math.sin(player.root.rotation.y), 0, Math.cos(player.root.rotation.y));
         puppy.root.position.copy(player.root.position).addScaledVector(f, 0.9);
@@ -585,6 +628,7 @@ function closeActivity(silent) {
   activityOpen.ov.remove();
   activityOpen = null;
   cam.closeup = null;
+  pipeline.setFocus(null);
   camera.clearViewOffset(); camera.updateProjectionMatrix();
   hud.classList.remove('hidden');
   bubbles.style.display = '';
@@ -603,12 +647,14 @@ function closeActivity(silent) {
 let night = 0, nightGoal = 0;
 function applyNight(n) {
   world.setNight(n);
-  // night stays soft and friendly (it's for little kids): bright moonlight + glowing lamps
-  sun.intensity = 2.8 * (1 - n) + 0.9 * n;
-  sun.color.set('#fff2e0').lerp(new THREE.Color('#b8c4ff'), n);
-  hemi.intensity = 1.5 * (1 - n) + 1.1 * n;
-  hemi.color.set('#dff1ff').lerp(new THREE.Color('#8a8ee0'), n);
-  hemi.groundColor.set('#ffd6e8').lerp(new THREE.Color('#7a5a9a'), n);
+  // night is a cosy evening (it's for little kids): soft moonlight, glowing lamps and windows
+  sun.intensity = 2.8 * (1 - n) + 0.5 * n;
+  sun.color.set('#fff2e0').lerp(new THREE.Color('#aab4ff'), n);
+  hemi.intensity = 1.0 * (1 - n) + 0.6 * n;
+  hemi.color.set('#dff1ff').lerp(new THREE.Color('#7a7ed8'), n);
+  hemi.groundColor.set('#ffd6e8').lerp(new THREE.Color('#5a3f7a'), n);
+  scene.environmentIntensity = 0.45 * (1 - n) + 0.15 * n;
+  pipeline.bloom.intensity = 0.7 + n * 0.9;
   scene.fog.color.set('#ffe6f2').lerp(new THREE.Color('#2a2450'), n);
   car.setNight(n);
 }
@@ -740,6 +786,9 @@ function updateDrive(dt) {
   car.speed = carState.speed;
   setEngine(Math.abs(carState.speed));
   if (carState.dist > 40 && !save.stickers.drive) award('drive');
+  const rr = rings.update(dt, t, carState.pos);
+  if (rr === 'ring') { sfx.sparkle(); burst(carState.pos.clone().add(new THREE.Vector3(0, 2, 0)), 'star', 12); }
+  if (rr === 'done') { sfx.success(); confetti(); speak(car.root, L.ringsDone, 1.4, 2.4); award('rings'); }
   player.update(dt, 0);
   puppy.update(dt, 0);
   puppy.body.position.y = 0;
@@ -829,6 +878,7 @@ function startGame() {
   setTimeout(() => document.getElementById('start').remove(), 600);
   hud.classList.remove('hidden');
   mode = 'walk';
+  camera.clearViewOffset(); camera.updateProjectionMatrix();
   cam.yaw = Math.PI / 2 + 0.35; cam.pitch = 0.42; cam.dist = 8.5;
   sfx.success();
   setTimeout(() => { player.wave = 1.6; speak(player.root, L.welcome(playerName()), 1.35); }, 700);
@@ -841,24 +891,66 @@ document.querySelectorAll('.lang-pick button').forEach(x => x.classList.toggle('
 setLang(save.lang);
 updateStickerCount();
 
+// pick your doll
+const LOOKS = [
+  { skin: SKIN.fair, hair: HAIR_COLORS.blonde, hairStyle: 'long', outfit: 'dress', color: '#ff5fa2', color2: '#ffffff', shoes: '#ff3d8f', eye: '#3a8fe0', lips: '#ff4f9a', bowColor: '#ff3d8f', acc: { necklace: true, earrings: '#ffffff' } },
+  { skin: SKIN.tan, hair: '#5a3422', hairStyle: 'ponytail', outfit: 'tutu', color: '#b07cff', color2: '#ffd6f5', shoes: '#c070ff', eye: '#6a3a1a', lips: '#e0508a', bowColor: '#ff8fc4', acc: { earrings: '#ffd24a' } },
+  { skin: SKIN.brown, hair: '#2b2024', hairStyle: 'curly', outfit: 'dress', color: '#ffd24a', color2: '#ffffff', shoes: '#ffffff', eye: '#5a3418', lips: '#d04a7a', bowColor: '#ff5fa2', acc: { bow: true, earrings: '#ff8fc4' } },
+  { skin: SKIN.fair, hair: HAIR_COLORS.red, hairStyle: 'braids', outfit: 'gown', color: '#6ec6ff', color2: '#ffffff', shoes: '#ffffff', eye: '#3aa860', lips: '#ff6f8f', freckles: true, bowColor: '#6ec6ff', acc: { tiara: true } },
+];
+const lookRow = document.getElementById('lookPick');
+LOOKS.forEach((lk, i) => {
+  const b = h('button', { class: 'look' + (i === (save.doll ? -1 : 0) ? ' on' : ''), 'aria-label': 'doll ' + (i + 1), style: { '--hair': lk.hair, '--skin': lk.skin, '--dress': lk.color } }, h('span', { class: 'lk-hair' }), h('span', { class: 'lk-face' }), h('span', { class: 'lk-dress' }));
+  b.onclick = () => {
+    initAudio();
+    lookRow.querySelectorAll('.look').forEach(x => x.classList.toggle('on', x === b));
+    player.rebuild(JSON.parse(JSON.stringify(LOOKS[i])));
+    player.wave = 1.4;
+    burst(player.root.position.clone().add(new THREE.Vector3(0, 1.4, 0)), 'star', 14);
+    sfx.sparkle();
+  };
+  lookRow.append(b);
+});
+
+// magic hearts + rainbow ring course
+const hearts = new MagicHearts(scene, world, save.hearts || []);
+const rings = new RingCourse(scene);
+const heartCountEl = document.getElementById('heartCount');
+const updateHeartCount = () => { heartCountEl.textContent = `${hearts.count}/8`; };
+updateHeartCount();
+if (hearts.count === 8 && !player.cfg.acc.wings) { player.cfg.acc.wings = true; player.buildAccessories(); }
+function collectHeart() {
+  save.hearts = hearts.found(); persist();
+  updateHeartCount();
+  const btn = document.getElementById('heartBtn'); btn.classList.remove('bump'); void btn.offsetWidth; btn.classList.add('bump');
+  sfx.sparkle(); setTimeout(() => sfx.success(), 200);
+  const at = (mode === 'drive' ? car.root.position : player.root.position).clone().add(new THREE.Vector3(0, 1.4, 0));
+  burst(at, 'heart', 14); burst(at, 'star', 10);
+  if (hearts.count === 8) {
+    player.cfg.acc = { ...player.cfg.acc, wings: true }; player.buildAccessories(); persist();
+    confetti();
+    setTimeout(() => { speak(mode === 'drive' ? car.root : player.root, L.wingsGot, 1.4); award('hearts'); }, 600);
+  } else toast('💖 ' + hearts.count + ' / 8');
+}
+document.getElementById('heartBtn').onclick = () => { sfx.pop(); toast(L.heartsHint, 3500); say(L.heartsHint, { lang: L.code }); };
+
 // ------------------------------------------------------------ loop
 const clock = new THREE.Clock();
 let t = 0;
 // adaptive resolution: start sharp, step down if the device struggles
-const perf = { frames: 0, time: 0, ratio: renderer.getPixelRatio() };
+const perf = { frames: 0, time: 0, grace: 2 };
 function adaptResolution(rawDt) {
   if (document.hidden || rawDt > 0.5) return;
   perf.frames++; perf.time += rawDt;
   if (perf.time < 2.5) return;
   const fps = perf.frames / perf.time;
   perf.frames = 0; perf.time = 0;
-  if (fps < 32 && perf.ratio > 1) {
-    perf.ratio = Math.max(1, perf.ratio - 0.25);
-    renderer.setPixelRatio(perf.ratio);
-    resize();
-  } else if (fps < 24 && renderer.shadowMap.enabled && perf.ratio <= 1) {
-    sun.shadow.mapSize.set(1024, 1024);
-    sun.shadow.map?.dispose(); sun.shadow.map = null;
+  if (perf.grace > 0) { perf.grace--; return; }
+  // step down one quality level if the device is struggling (never below low)
+  if (fps < 28 && quality !== 'low' && !save.quality) {
+    quality = quality === 'high' ? 'medium' : 'low';
+    pipeline.apply(quality); resize();
+    perf.grace = 2;
   }
 }
 function frame() {
@@ -871,8 +963,11 @@ function frame() {
   else if (mode === 'activity') { player.update(dt, 0); setActions([]); showDoorButton(null); }
   else if (mode === 'start') {
     player.update(dt, 0);
-    cam.yaw += dt * 0.12;
   }
+  if (mode === 'walk' || mode === 'drive') {
+    const got = hearts.update(dt, t, mode === 'drive' ? carState.pos : player.root.position, mode === 'drive' ? 2.2 : 1.1);
+    if (got >= 0) collectHeart();
+  } else hearts.update(dt, t, { x: 1e9, z: 1e9 }, 0);
   updatePuppy(dt);
   updateNPCs(dt);
   car.update(dt);
@@ -882,9 +977,11 @@ function frame() {
   night += (nightGoal - night) * Math.min(1, dt * 1.5);
   if (Math.abs(nightGoal - night) > 0.001 || frame.n === undefined) { applyNight(night); frame.n = 1; }
   if (mode === 'start') {
-    const r = 14;
-    camera.position.set(Math.sin(cam.yaw) * r - 8, 6.5, Math.cos(cam.yaw) * r);
-    camera.lookAt(-10, 1.5, 0);
+    // gentle turntable around the doll so you can see the look you picked
+    const a = player.root.rotation.y + Math.sin(t * 0.35) * 0.45;
+    const base = player.root.position;
+    camera.position.set(base.x + Math.sin(a) * 3.6, base.y + 1.6, base.z + Math.cos(a) * 3.6);
+    camera.lookAt(base.x, base.y + 1.0, base.z);
     cam.lookCur = null;
   } else updateCamera(dt);
   // keep the shadow map centred on the action
@@ -892,7 +989,7 @@ function frame() {
   sun.target.position.copy(focus);
   sun.position.copy(focus).add(SUN_OFF);
   updateBubbles(dt);
-  renderer.render(scene, camera);
+  pipeline.render(dt);
   requestAnimationFrame(frame);
 }
 resize();
@@ -900,4 +997,4 @@ frame();
 
 // voices load async in some browsers
 if (window.speechSynthesis) speechSynthesis.onvoiceschanged = () => {};
-window.__game = { snap: () => updateCamera(10), player, puppy, car, npcs, world, openActivity, closeActivity, enterCar, exitCar, get mode() { return mode; }, cam, carState, camera, save, award, takePhoto, setLang };
+window.__game = { setNightNow: v => { night = nightGoal = v; applyNight(v); }, pipeline, hearts, rings, setQuality, collectHeart, snap: () => updateCamera(10), player, puppy, car, npcs, world, openActivity, closeActivity, enterCar, exitCar, get mode() { return mode; }, cam, carState, camera, save, award, takePhoto, setLang };
