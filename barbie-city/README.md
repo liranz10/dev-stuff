@@ -21,6 +21,16 @@ A cute 3D doll-in-the-city game made for a 5-year-old. She walks around a small 
 3. מופיע אייקון "עיר הבובות" במסך הבית. המשחק נפתח במסך מלא, בלי שורת כתובת.
 4. אחרי הפתיחה הראשונה המשחק עובד גם **בלי אינטרנט**. כשמעלים גרסה חדשה, היא נטענת אוטומטית בפעם הבאה שיש חיבור.
 
+## משחק ביחד (חדר משפחתי) ותמונת פנים
+
+- **שמות:** במסך הפתיחה בוחרים **יובל** או **עלמה** בכפתור גדול, או כותבים שם אחר.
+- **🤳 הדמות עם הפנים שלך:** לוחצים "מצלמים את הפנים", שמים את הפנים בתוך העיגול ולוחצים על המצלמה (או בוחרים תמונה מהאלבום). התמונה מונחת על פני הדמות, וצבע העור מותאם אוטומטית. אפשר גם מבית החלומות.
+- **👫 משחק ביחד:** לכל מכשיר יש **מספר חדר משפחתי** במסך הפתיחה. מי שכותב את אותו מספר רואה את השאר בעיר: שם מעל הראש, בגדים, פנים, כלבלב ומכונית. לוחצים על חבר כדי להגיד שלום. הכפתור 👫 מראה מי בחדר.
+- **פרטיות:** רק מי שיודע את מספר החדר נכנס אליו. המיקום נמחק רבע דקה אחרי שיוצאים מהמשחק, ותמונת הפנים נמחקת אחרי 6 שעות. הנתונים נשמרים רק במסד הנתונים של הפרויקט שלך ב-Vercel.
+
+**כדי שמשחק ביחד יעבוד צריך מסד נתונים קטן (חינם), פעם אחת:**
+ב-Vercel ← הפרויקט `doll-city` ← **Storage** ← **Create Database** ← **Upstash for Redis** ← התוכנית החינמית ← לחבר לפרויקט `doll-city`. אחר כך **Redeploy**. בלי זה המשחק עובד רגיל, רק בלי חברים.
+
 ## What's in the town
 
 | Place | What you do there |
@@ -84,6 +94,9 @@ Source is in `src/`:
 - `activities.js`: the shop mini-games
 - `render.js`: post-processing chain, quality presets, sky environment map
 - `quests.js`: magic hearts and the rainbow ring course
+- `net.js`: family-room multiplayer (polls `/api/room`, draws the other children)
+- `face.js`: selfie camera and the photo face texture
+- `../api/room.js`, `../api/face.js`: Vercel functions on Upstash Redis (room state, selfies)
 - `textures.js`: signs, face and patterns, drawn on canvases
 - `audio.js`: synthesized sound effects, music and voice
 - `i18n.js`: all the game's text (Hebrew)

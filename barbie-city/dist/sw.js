@@ -1,6 +1,6 @@
 // Offline support: the whole game is one HTML file, so we keep it (plus icons and fonts) in a cache.
 // Online: always try the network first so updates show up; offline: play from the cache.
-const CACHE = 'doll-city-df7c6314ca';
+const CACHE = 'doll-city-ddb6ca5ec8';
 const CORE = ['./', './index.html', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png', './icons/apple-touch-icon.png'];
 
 self.addEventListener('install', (e) => {
@@ -25,6 +25,7 @@ self.addEventListener('fetch', (e) => {
     return;
   }
   if (url.origin !== self.location.origin) return;
+  if (url.pathname.includes('/api/')) return; // live multiplayer data is never cached
   // same-origin: network first, cache fallback
   e.respondWith(fetch(req).then((res) => {
     if (res.ok) { const copy = res.clone(); caches.open(CACHE).then((c) => c.put(req, copy)); }

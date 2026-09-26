@@ -1,5 +1,12 @@
 import * as THREE from 'three';
 import { faceTex, hairTex, glitterTex, plateTex, lighten } from './textures.js';
+import { photoFaceTexture } from './face.js';
+
+const photoCache = new Map(); // data URL -> texture (shared by rebuilds and by other players)
+function photoTex(url) {
+  if (!photoCache.has(url)) { if (photoCache.size > 12) photoCache.clear(); photoCache.set(url, photoFaceTexture(url)); }
+  return photoCache.get(url);
+}
 
 // ---------------- shared helpers ----------------
 // Degenerate triangles (lathe poles, extrude corners) can leave zero-length normals, which turn into
@@ -221,8 +228,13 @@ export class Doll {
       if (!boy) { const er = ball(0.014, mat(c.acc.earrings || '#ffffff', { roughness: 0.1, metalness: 0.4 })); er.position.set(R * 0.99 * s, -0.06, 0.01); head.add(er); }
     }
     // face decal
-    this.faceOpen = faceTex({ eye: c.eye, lips: boy ? '#d9786f' : c.lips, lashes: !boy, freckles: c.freckles });
-    this.faceClosed = faceTex({ eye: c.eye, lips: boy ? '#d9786f' : c.lips, lashes: !boy, closed: true, freckles: c.freckles });
+    if (c.photo) {
+      // the child's own face from the selfie camera
+      this.faceOpen = this.faceClosed = photoTex(c.photo);
+    } else {
+      this.faceOpen = faceTex({ eye: c.eye, lips: boy ? '#d9786f' : c.lips, lashes: !boy, freckles: c.freckles });
+      this.faceClosed = faceTex({ eye: c.eye, lips: boy ? '#d9786f' : c.lips, lashes: !boy, closed: true, freckles: c.freckles });
+    }
     this.faceMat = new THREE.MeshStandardMaterial({ map: this.faceOpen, transparent: true, roughness: 0.5, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 });
     const faceGeo = new THREE.SphereGeometry(R * 1.003, 48, 32, Math.PI / 2 - 0.9, 1.8, Math.PI * 0.3, Math.PI * 0.48);
     const face = new THREE.Mesh(faceGeo, this.faceMat);
@@ -230,7 +242,7 @@ export class Doll {
     face.renderOrder = 2;
     head.add(face);
     // tiny 3D nose
-    const nose = ball(0.018, skinM, 1, 0.8, 0.9); nose.position.set(0, -0.04, R * 0.97); head.add(nose);
+    if (!c.photo) { const nose = ball(0.018, skinM, 1, 0.8, 0.9); nose.position.set(0, -0.04, R * 0.97); head.add(nose); }
 
     this.buildHair();
     this.buildAccessories();
@@ -496,6 +508,7 @@ export class Doll {
   // item held in right hand: 'coffee' | 'icecream' | 'bag' | null
   setHold(kind, data) {
     this.holdItem = kind;
+    this.holdData = data || null;
     if (this.holdObj) { this.holdObj.parent.remove(this.holdObj); this.holdObj = null; }
     if (!kind) return;
     const g = new THREE.Group();

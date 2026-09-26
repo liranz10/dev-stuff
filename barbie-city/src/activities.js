@@ -391,6 +391,7 @@ export function home(ctx) {
       h('button', { class: 'pick', style: { '--c': '#ffd24a' }, onclick: () => { ctx.setNight(false); sfx.success(); say(L.wake, { lang: L.code }); ctx.award('home'); ctx.close(); } }, h('div', { class: 'pick-emoji' }, '☀️'), h('div', { class: 'pick-name' }, L.wake)),
       h('button', { class: 'pick', style: { '--c': '#ff5fa2' }, onclick: () => { ctx.award('home'); ctx.switchTo('boutique'); } }, h('div', { class: 'pick-emoji' }, '👗'), h('div', { class: 'pick-name' }, L.outfitLabel)),
       h('button', { class: 'pick', style: { '--c': '#b07cff' }, onclick: () => { ctx.award('home'); ctx.switchTo('hair'); } }, h('div', { class: 'pick-emoji' }, '🪞'), h('div', { class: 'pick-name' }, L.styleLabel)),
+      h('button', { class: 'pick wide-pick', style: { '--c': '#5ab4f0' }, onclick: () => { ctx.award('home'); ctx.selfie(); } }, h('div', { class: 'pick-emoji' }, '🤳'), h('div', { class: 'pick-name' }, L.camTake)),
     ),
   );
   if (isNight) body.firstChild.children[1].classList.add('glow');
