@@ -10,6 +10,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@vercel/analytics": "^2.0.1",
     "esbuild": "^0.28.2",
     "postprocessing": "^6.39.5",
     "three": "^0.170.0"
