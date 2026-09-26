@@ -7,10 +7,12 @@ import { LANGS, FRIEND_NAMES } from './i18n.js';
 import { ACTIVITIES, h } from './activities.js';
 import { Pipeline, bakeEnvironment, autoPreset, PRESETS } from './render.js';
 import { MagicHearts, RingCourse } from './quests.js';
+import { Net, RemotePlayers } from './net.js';
+import { captureFace, sampleSkin } from './face.js';
 
 // ------------------------------------------------------------ saved state
 const SAVE_KEY = 'dream-doll-city-v1';
-let save = { lang: 'en', name: '', doll: null, puppy: null, stickers: {}, met: {}, hearts: [], quality: null, look: 0 };
+let save = { lang: 'en', name: '', doll: null, puppy: null, stickers: {}, met: {}, hearts: [], quality: null, look: 0, id: '', room: '' };
 try { const s = JSON.parse(localStorage.getItem(SAVE_KEY)); if (s) save = { ...save, ...s }; } catch (e) { /* private mode */ }
 function persist() {
   try {
@@ -22,7 +24,10 @@ function persist() {
 // the game is Hebrew only
 save.lang = 'he';
 let L = LANGS.he;
-const playerName = () => save.name || L.defaultName;
+const playerName = () => save.name || L.names[0];
+// who am I in the family room (random, stays on this device)
+if (!save.id) save.id = Math.random().toString(36).slice(2, 12).padEnd(8, '0');
+if (!save.room) save.room = String(1000 + Math.floor(Math.random() * 9000));
 
 // ------------------------------------------------------------ renderer + scene
 const canvas = document.getElementById('game');
@@ -280,6 +285,15 @@ function onTap(x, y) {
   // puppy / friends / car first
   const hitObj = (root) => raycaster.intersectObject(root, true).length > 0;
   if (hitObj(puppy.root)) { petPuppy(); return; }
+  const rp = remotes.pick(raycaster);
+  if (rp) {
+    player.wave = 1.6; player.dance = 1.4;
+    sfx.sparkle();
+    const at = (rp.driving && rp.car ? rp.car.root : rp.doll.root).position.clone().add(new THREE.Vector3(0, 1.8, 0));
+    burst(at, 'heart', 10);
+    speak(player.root, L.hiFriend(rp.s.n || ''), 1.35);
+    return;
+  }
   for (const n of npcs) {
     if (hitObj(n.doll.root)) {
       if (mode === 'walk' && n.doll.root.position.distanceTo(player.root.position) > 3.5) { walkTo(n.doll.root.position, { type: 'npc', id: n.id }, 1.4); }
@@ -460,7 +474,6 @@ function setLang(code) {
   const pl = document.getElementById('pickLabel'); if (pl) pl.textContent = L.pickDoll;
   const st = document.getElementById('startSub'); if (st) st.textContent = L.subtitle;
   const nl = document.getElementById('nameLabel'); if (nl) nl.textContent = L.nameLabel;
-  const ni = document.getElementById('nameInput'); if (ni && wasDefault) ni.placeholder = L.defaultName;
   const pb = document.getElementById('playBtn'); if (pb) pb.textContent = '▶ ' + L.play;
   document.title = L.title;
   persist();
@@ -616,6 +629,7 @@ function openActivity(id) {
     isNight: () => nightGoal > 0.5,
     setNight: (on) => { nightGoal = on ? 1 : 0; },
     switchTo: (other) => { closeActivity(true); openActivity(other); },
+    selfie: () => { closeActivity(true); takeSelfie(); },
   };
   if (id === 'hair' || id === 'boutique') player.setHold(null);
   // default framing: the doll standing in front of the shop
@@ -873,6 +887,7 @@ function startGame() {
   const input = document.getElementById('nameInput');
   const nm = input.value.trim();
   if (nm) save.name = nm.slice(0, 16);
+  else if (!save.name) save.name = L.names[0];
   persist();
   document.getElementById('start').classList.add('gone');
   setTimeout(() => document.getElementById('start').remove(), 600);
@@ -884,7 +899,16 @@ function startGame() {
   setTimeout(() => { player.wave = 1.6; speak(player.root, L.welcome(playerName()), 1.35); }, 700);
 }
 document.getElementById('playBtn').onclick = startGame;
-document.getElementById('nameInput').value = save.name || '';
+// name: two big buttons (יובל / עלמה) or type another name
+const nameInput = document.getElementById('nameInput');
+const namePick = document.getElementById('namePick');
+nameInput.value = save.name && !L.names.includes(save.name) ? save.name : '';
+L.names.forEach((nm) => {
+  const b = h('button', { class: 'name-btn' + ((save.name || L.names[0]) === nm ? ' on' : '') }, nm);
+  b.onclick = () => { initAudio(); save.name = nm; nameInput.value = ''; namePick.querySelectorAll('.name-btn').forEach(x => x.classList.toggle('on', x === b)); sfx.pop(); say(nm, { lang: L.code }); };
+  namePick.append(b);
+});
+nameInput.addEventListener('input', () => { if (nameInput.value.trim()) namePick.querySelectorAll('.name-btn').forEach(x => x.classList.remove('on')); });
 document.getElementById('nameInput').addEventListener('keydown', e => { if (e.key === 'Enter') startGame(); });
 setLang('he');
 updateStickerCount();
@@ -895,20 +919,120 @@ const LOOKS = [
   { skin: SKIN.tan, hair: '#5a3422', hairStyle: 'ponytail', outfit: 'tutu', color: '#b07cff', color2: '#ffd6f5', shoes: '#c070ff', eye: '#6a3a1a', lips: '#e0508a', bowColor: '#ff8fc4', acc: { earrings: '#ffd24a' } },
   { skin: SKIN.brown, hair: '#2b2024', hairStyle: 'curly', outfit: 'dress', color: '#ffd24a', color2: '#ffffff', shoes: '#ffffff', eye: '#5a3418', lips: '#d04a7a', bowColor: '#ff5fa2', acc: { bow: true, earrings: '#ff8fc4' } },
   { skin: SKIN.fair, hair: HAIR_COLORS.red, hairStyle: 'braids', outfit: 'gown', color: '#6ec6ff', color2: '#ffffff', shoes: '#ffffff', eye: '#3aa860', lips: '#ff6f8f', freckles: true, bowColor: '#6ec6ff', acc: { tiara: true } },
-];
+  { boy: true, skin: SKIN.light, hair: '#7a4a2a', hairStyle: 'short', outfit: 'pants', color: '#3fcf9a', color2: '#2f4a8a', shoes: '#ffd24a', eye: '#3a8fe0', lips: '#d9786f', nails: '#f3c9b0', bowColor: '#3fcf9a', acc: {} },
+].map(l => ({ boy: false, freckles: false, ...l }));
 const lookRow = document.getElementById('lookPick');
 LOOKS.forEach((lk, i) => {
   const b = h('button', { class: 'look' + (i === (save.doll ? -1 : 0) ? ' on' : ''), 'aria-label': 'בובה ' + (i + 1), style: { '--hair': lk.hair, '--skin': lk.skin, '--dress': lk.color } }, h('span', { class: 'lk-hair' }), h('span', { class: 'lk-face' }), h('span', { class: 'lk-dress' }));
   b.onclick = () => {
     initAudio();
     lookRow.querySelectorAll('.look').forEach(x => x.classList.toggle('on', x === b));
-    player.rebuild(JSON.parse(JSON.stringify(LOOKS[i])));
+    const look = JSON.parse(JSON.stringify(LOOKS[i]));
+    if (player.cfg.photo) { look.photo = player.cfg.photo; look.skin = player.cfg.skin; } // keep the selfie face
+    player.rebuild(look);
     player.wave = 1.4;
     burst(player.root.position.clone().add(new THREE.Vector3(0, 1.4, 0)), 'star', 14);
     sfx.sparkle();
   };
   lookRow.append(b);
 });
+
+// ------------------------------------------------------------ selfie face
+async function takeSelfie() {
+  initAudio();
+  let res;
+  do { res = await captureFace(L); } while (res === 'again');
+  if (!res) return;
+  const img = new Image();
+  img.onload = () => {
+    const skin = sampleSkin(img) || player.cfg.skin;
+    player.rebuild({ photo: res, skin });
+    player.wave = 1.6;
+    burst(player.root.position.clone().add(new THREE.Vector3(0, 1.7, 0)), 'star', 16);
+    sfx.sparkle();
+    save.faceVer = Date.now() % 1e9;
+    persist();
+    net.sendFace(res);
+    updatePhotoButtons();
+    say(L.camYay(playerName()), { lang: L.code });
+  };
+  img.src = res;
+}
+function removeSelfie() {
+  const look = LOOKS.find(l => l.boy === !!player.cfg.boy) || LOOKS[0];
+  player.rebuild({ photo: undefined, skin: look.skin });
+  delete player.cfg.photo;
+  save.faceVer = 0; persist();
+  net.sendFace(null);
+  updatePhotoButtons();
+  sfx.whoosh();
+}
+function updatePhotoButtons() {
+  document.querySelectorAll('.photo-face-btn').forEach(b => { b.textContent = player.cfg.photo ? '🤳 ' + L.camRetake : '🤳 ' + L.camTake; });
+  document.querySelectorAll('.photo-remove-btn').forEach(b => { b.hidden = !player.cfg.photo; });
+}
+document.getElementById('faceBtn').onclick = takeSelfie;
+document.getElementById('faceRemove').onclick = removeSelfie;
+updatePhotoButtons();
+
+// ------------------------------------------------------------ family room (multiplayer)
+const labels = document.getElementById('labels');
+const roomInput = document.getElementById('roomInput');
+roomInput.value = save.room;
+roomInput.addEventListener('change', () => setRoom(roomInput.value));
+function setRoom(v) {
+  const code = String(v).replace(/[^0-9]/g, '').slice(0, 8);
+  if (code.length < 4) { roomInput.value = save.room; return; }
+  save.room = code; roomInput.value = code; persist();
+  net.setCode(code);
+  if (player.cfg.photo) net.sendFace(player.cfg.photo);
+  document.querySelectorAll('.room-code').forEach(e => { e.textContent = code; });
+}
+const friendsEl = document.getElementById('friendsBtn');
+const net = new Net({
+  code: save.room, id: save.id,
+  onPlayers: (players) => {
+    remotes.sync(players);
+    friendsEl.querySelector('span').textContent = String(players.length);
+    friendsEl.classList.toggle('has', players.length > 0);
+  },
+  onStatus: (st) => { friendsEl.hidden = st !== 'on'; },
+});
+// the network runs on its own clock, so a slow frame never delays it
+let netLast = performance.now();
+setInterval(() => {
+  const now = performance.now();
+  if (mode !== 'start') net.update(Math.min(5, (now - netLast) / 1000), myState);
+  netLast = now;
+}, 100);
+const remotes = new RemotePlayers({
+  scene, world, net, labels,
+  onNew: (r) => { sfx.hello(); toast('👋 ' + L.friendJoined(r.s.n || '')); },
+});
+if (player.cfg.photo) { save.faceVer = save.faceVer || Date.now() % 1e9; net.sendFace(player.cfg.photo); }
+function myState() {
+  const c = { ...player.cfg }; delete c.photo;
+  const st = { n: playerName(), c, p: { ...puppy.cfg }, x: +player.root.position.x.toFixed(2), z: +player.root.position.z.toFixed(2), ry: +player.root.rotation.y.toFixed(2), m: mode === 'drive' ? 'd' : 'w', w: player.wave > 0 ? 1 : 0, d: player.dance > 0 ? 1 : 0, h: player.holdItem || null, hd: player.holdData || null, fv: player.cfg.photo ? (save.faceVer || 1) : 0 };
+  if (mode === 'drive') { st.cx = +carState.pos.x.toFixed(2); st.cz = +carState.pos.z.toFixed(2); st.ch = +carState.heading.toFixed(2); }
+  return st;
+}
+friendsEl.onclick = showRoom;
+function showRoom() {
+  sfx.pop();
+  const ov = h('div', { class: 'overlay' });
+  const list = h('div', { class: 'friend-row' }, ...remotes.list.map(r => h('div', { class: 'friend met' }, h('div', { class: 'fr-dot', style: { background: r.s.c?.color || '#ff5fa2' } }, '♥'), h('div', { class: 'fr-name' }, r.s.n || ''))));
+  const inp = h('input', { class: 'room-input', id: 'roomInput2', inputmode: 'numeric', maxlength: '8', value: save.room, 'aria-label': L.roomLabel });
+  inp.addEventListener('change', () => { setRoom(inp.value); roomInput.value = save.room; });
+  const card = h('div', { class: 'act-card' },
+    h('div', { class: 'act-head' }, h('div', { class: 'act-icon' }, '👫'), h('div', { class: 'act-title' }, L.roomTitle), h('button', { class: 'x-btn', onclick: () => ov.remove() }, '✕')),
+    h('div', { class: 'act-body' },
+      remotes.list.length ? list : h('div', { class: 'npc-line' }, h('span', { class: 'npc-face' }, '🏠'), h('span', { class: 'npc-text' }, L.roomEmpty)),
+      h('div', { class: 'row-label' }, '🔑 ', L.roomLabel), inp,
+      h('div', { class: 'room-help' }, L.roomHelp)));
+  ov.append(card);
+  ov.addEventListener('click', e => { if (e.target === ov) ov.remove(); });
+  document.body.append(ov);
+}
 
 // magic hearts + rainbow ring course
 const hearts = new MagicHearts(scene, world, save.hearts || []);
@@ -987,6 +1111,7 @@ function frame() {
   sun.target.position.copy(focus);
   sun.position.copy(focus).add(SUN_OFF);
   updateBubbles(dt);
+  remotes.update(dt, camera);
   pipeline.render(dt);
   requestAnimationFrame(frame);
 }
@@ -995,4 +1120,4 @@ frame();
 
 // voices load async in some browsers
 if (window.speechSynthesis) speechSynthesis.onvoiceschanged = () => {};
-window.__game = { setNightNow: v => { night = nightGoal = v; applyNight(v); }, pipeline, hearts, rings, setQuality, collectHeart, snap: () => updateCamera(10), player, puppy, car, npcs, world, openActivity, closeActivity, enterCar, exitCar, get mode() { return mode; }, cam, carState, camera, save, award, takePhoto, setLang };
+window.__game = { net, remotes, setRoom, takeSelfie, removeSelfie, myState, setNightNow: v => { night = nightGoal = v; applyNight(v); }, pipeline, hearts, rings, setQuality, collectHeart, snap: () => updateCamera(10), player, puppy, car, npcs, world, openActivity, closeActivity, enterCar, exitCar, get mode() { return mode; }, cam, carState, camera, save, award, takePhoto, setLang };

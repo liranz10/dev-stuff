@@ -25,6 +25,7 @@ self.addEventListener('fetch', (e) => {
     return;
   }
   if (url.origin !== self.location.origin) return;
+  if (url.pathname.includes('/api/')) return; // live multiplayer data is never cached
   // same-origin: network first, cache fallback
   e.respondWith(fetch(req).then((res) => {
     if (res.ok) { const copy = res.clone(); caches.open(CACHE).then((c) => c.put(req, copy)); }

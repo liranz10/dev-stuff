@@ -26,6 +26,7 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #ffe6f2; fon
 #game { position: fixed; inset: 0; width: 100vw; height: 100vh; height: 100dvh; display: block; outline: none; }
 button { font-family: inherit; color: inherit; cursor: pointer; border: none; }
 .hidden { display: none !important; }
+[hidden] { display: none !important; }
 
 /* ---------- start screen ---------- */
 #start { position: fixed; inset: 0; display: flex; align-items: center; justify-content: flex-end; z-index: 50; background: linear-gradient(90deg, rgba(255,210,230,0) 35%, rgba(255,160,205,.45)); transition: opacity .6s, transform .6s; padding: 16px max(16px, 4vw); }
@@ -248,6 +249,38 @@ button { font-family: inherit; color: inherit; cursor: pointer; border: none; }
 .photo-caption { text-align: center; font-size: 22px; font-weight: 700; color: var(--hot); margin: 8px 0; }
 .photo-actions { display: flex; justify-content: center; gap: 12px; }
 
+/* names, selfie, room */
+.name-pick { display: flex; gap: 12px; justify-content: center; margin-bottom: 8px; }
+.name-btn { font-size: 28px; font-weight: 700; padding: 10px 26px; border-radius: 22px; background: #fff; border: 4px solid #ffd0e4; color: var(--hot); box-shadow: 0 5px 0 rgba(200,60,130,.2); }
+.name-btn.on { background: linear-gradient(180deg, #ff9cc8, #ff4f9a); color: #fff; border-color: #fff; transform: scale(1.06); }
+#nameInput { font-size: 18px; padding: 8px; }
+.face-row { display: flex; gap: 8px; justify-content: center; align-items: center; margin-bottom: 10px; }
+.face-row .big-btn { font-size: 19px; padding: 10px 16px; }
+.face-row .round { width: 44px; height: 44px; font-size: 18px; }
+.room-row { display: flex; gap: 8px; justify-content: center; align-items: center; margin-top: 12px; font-weight: 600; font-size: 16px; }
+.room-input { width: 110px; font: inherit; font-size: 22px; font-weight: 700; letter-spacing: 3px; text-align: center; padding: 4px 8px; border-radius: 14px; border: 3px solid #ffd0e4; color: var(--hot); background: #fff; user-select: text; -webkit-user-select: text; direction: ltr; }
+.act-body .room-input { width: 100%; font-size: 30px; }
+.room-help { font-size: 15px; color: #a0457a; line-height: 1.4; }
+#friendsBtn { height: 42px; border-radius: 22px; padding: 0 14px 0 10px; font-size: 20px; background: linear-gradient(180deg, #d6f0ff, #8fd8ff); box-shadow: 0 4px 0 #4aa0d8, 0 6px 14px rgba(0,0,0,.12); color: #1d4f7a; font-weight: 700; display: flex; align-items: center; gap: 4px; }
+#friendsBtn.has { animation: bump .6s; }
+#labels { position: fixed; inset: 0; pointer-events: none; z-index: 8; overflow: hidden; }
+.name-tag { position: absolute; left: 0; top: 0; background: linear-gradient(180deg, #fff, #ffe6f2); color: var(--hot); font-weight: 700; font-size: 16px; padding: 3px 12px; border-radius: 14px; border: 2px solid #fff; box-shadow: 0 3px 8px rgba(120,30,80,.25); white-space: nowrap; transition: opacity .2s; }
+.wide-pick { grid-column: 1 / -1; }
+/* selfie camera */
+.cam-overlay { background: rgba(255,150,200,.55); z-index: 60; }
+.cam-card { position: relative; background: var(--card); border: 5px solid #fff; border-radius: 34px; box-shadow: var(--shadow); padding: 16px; width: min(520px, 100%); max-height: calc(100dvh - 28px); overflow: auto; display: flex; flex-direction: column; gap: 12px; align-items: center; }
+.cam-x { position: absolute; top: 10px; inset-inline-start: 10px; z-index: 3; }
+.cam-stage { position: relative; width: min(420px, 78vw, 52dvh); aspect-ratio: 1; border-radius: 28px; overflow: hidden; background: #2a1a30; }
+.cam-video, .cam-preview { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); display: block; }
+.cam-preview { transform: none; }
+.cam-guide { position: absolute; left: 19%; right: 19%; top: 13%; bottom: 13%; border-radius: 50%; border: 5px dashed #fff; box-shadow: 0 0 0 999px rgba(255,120,190,.35); pointer-events: none; }
+.cam-guide.done { border-style: solid; border-color: #ffd24a; }
+.cam-count { position: absolute; inset: 0; display: grid; place-items: center; font-size: 120px; font-weight: 700; color: #fff; text-shadow: 0 4px 0 var(--hot); opacity: 0; }
+.cam-count.show { opacity: 1; }
+.cam-msg { font-size: 20px; font-weight: 600; text-align: center; }
+.cam-actions { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+.cam-snap { font-size: 40px; width: 96px; height: 96px; border-radius: 50%; padding: 0; }
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
 }
@@ -273,9 +306,10 @@ button { font-family: inherit; color: inherit; cursor: pointer; border: none; }
 <body>
 <canvas id="game" tabindex="0"></canvas>
 <div id="bubbles"></div>
+<div id="labels"></div>
 
 <div id="hud" class="hidden">
-  <div class="top-left"><button id="stickerBtn" aria-label="מדבקות">⭐ <span id="stickerCount">0/13</span></button><button id="heartBtn" aria-label="לבבות קסם">💖 <span id="heartCount">0/8</span></button></div>
+  <div class="top-left"><button id="stickerBtn" aria-label="מדבקות">⭐ <span id="stickerCount">0/13</span></button><button id="heartBtn" aria-label="לבבות קסם">💖 <span id="heartCount">0/8</span></button><button id="friendsBtn" aria-label="חברים בחדר" hidden>👫 <span>0</span></button></div>
   <div class="top-right">
     <button class="round" id="photoBtn" aria-label="צילום">📸</button>
     <button class="round" id="musicBtn" aria-label="מוזיקה">🎵</button>
@@ -293,12 +327,15 @@ button { font-family: inherit; color: inherit; cursor: pointer; border: none; }
     <div class="crown">👑</div>
     <h1 id="startTitle">עיר הבובות</h1>
     <div class="sub" id="startSub">עיירה ורודה ומלאה חברים!</div>
-    <div class="look-label" id="pickLabel">בחרי בובה</div>
+    <div class="look-label" id="pickLabel">בחרו דמות</div>
     <div class="look-pick" id="lookPick"></div>
-    <label id="nameLabel" for="nameInput">איך קוראים לבובה שלך?</label>
-    <input id="nameInput" maxlength="16" autocomplete="off" placeholder="בלה">
-    <button id="playBtn">▶ בואי נשחק!</button>
-    <div class="hint">🔊 להדליק צליל! • 👆 לוחצים כדי ללכת</div>
+    <div class="face-row"><button class="big-btn soft photo-face-btn" id="faceBtn">🤳 מצלמים את הפנים</button><button class="round photo-remove-btn" id="faceRemove" aria-label="בלי תמונה" hidden>✕</button></div>
+    <label id="nameLabel" for="nameInput">איך קוראים לך?</label>
+    <div class="name-pick" id="namePick"></div>
+    <input id="nameInput" maxlength="16" autocomplete="off" placeholder="או שם אחר…">
+    <button id="playBtn">▶ בואו נשחק!</button>
+    <div class="room-row"><label for="roomInput">🏠 חדר משפחתי:</label><input id="roomInput" class="room-input" inputmode="numeric" maxlength="8" autocomplete="off"></div>
+    <div class="hint">🔊 להדליק צליל! • 👫 אותו מספר חדר = משחקים ביחד</div>
   </div>
 </div>
 
