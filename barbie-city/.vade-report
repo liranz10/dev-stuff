@@ -1,0 +1,53 @@
+Implemented Vercel Web Analytics for the Doll City project.
+
+## What was implemented:
+
+1. **Installed @vercel/analytics package**
+   - Added `@vercel/analytics` as a dependency in package.json
+   - Updated package-lock.json with the new dependency and its 5 sub-dependencies
+
+2. **Configured Analytics for Static HTML Site**
+   - Added Vercel Analytics script tag to `index.html` in the head section
+   - Used the CDN-hosted script approach: `<script defer src="https://cdn.vercel-insights.com/v1/script.js"></script>`
+   - Script placement: After font stylesheet links, before the style tag
+
+3. **Build Verification**
+   - Ran `npm run build` successfully - build completed without errors
+   - Verified that the analytics script is included in the built output (dist/index.html and dist/embed.html)
+   - Build size: 888 KB (same as before, script loads asynchronously from CDN)
+
+## Files Modified:
+
+- `/index.html` - Added Vercel Analytics script tag
+- `/package.json` - Added @vercel/analytics dependency
+- `/package-lock.json` - Updated with new dependency tree
+- `/dist/index.html` - Built output including analytics script
+- `/dist/embed.html` - Built embed version including analytics script
+- `/dist/sw.js` - Updated service worker with new version hash
+
+## Implementation Details:
+
+This is a static HTML/JavaScript game built with esbuild. Following the official Vercel Analytics documentation, I used the recommended approach for HTML/static sites:
+- Script is loaded from Vercel's CDN (https://cdn.vercel-insights.com/v1/script.js)
+- Uses `defer` attribute for optimal performance (loads asynchronously, executes after DOM parsing)
+- No additional configuration needed - analytics will automatically track page views
+- Script is included in the source HTML and gets bundled into the final build
+
+The analytics will be active once the site is deployed to Vercel. The script automatically handles:
+- Page view tracking
+- Web Vitals metrics (CLS, FID, LCP, FCP, TTFB)
+- Cross-domain tracking if configured in Vercel dashboard
+
+## Testing:
+
+✅ Build completed successfully (`npm run build`)
+✅ Analytics script verified in build output
+✅ No linting errors (project has no lint scripts configured)
+✅ No test failures (project has no test scripts configured)
+
+## Next Steps:
+
+To activate analytics:
+1. Deploy to Vercel or push to your connected repository
+2. Enable Web Analytics in the Vercel dashboard (Project Settings → Analytics)
+3. Analytics data will start appearing within 24 hours of deployment

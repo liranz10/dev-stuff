@@ -1,6 +1,6 @@
 // Offline support: the whole game is one HTML file, so we keep it (plus icons and fonts) in a cache.
 // Online: always try the network first so updates show up; offline: play from the cache.
-const CACHE = 'doll-city-ddb6ca5ec8';
+const CACHE = 'doll-city-192bd9a49a';
 const CORE = ['./', './index.html', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png', './icons/apple-touch-icon.png'];
 
 self.addEventListener('install', (e) => {
