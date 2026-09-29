@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>מלון הכוכבים: דפים להדפסה</title>
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root { --ink: #45305c; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: 'Fredoka', 'Varela Round', system-ui, sans-serif; color: var(--ink); background: #f6eef6; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .intro { max-width: 820px; margin: 20px auto; background: #fff; border-radius: 20px; padding: 20px 26px; box-shadow: 0 6px 20px rgba(69, 48, 92, .12); }
+  .intro h1 { margin: 0 0 6px; }
+  .intro p { margin: 6px 0; font-size: 17px; line-height: 1.5; }
+  .intro button { font: inherit; font-size: 20px; font-weight: 700; border: 0; background: #ff7eb6; color: #fff; padding: 10px 26px; border-radius: 999px; cursor: pointer; margin-top: 8px; }
+  .page { width: 210mm; min-height: 297mm; margin: 16px auto; background: #fff; padding: 10mm; display: flex; flex-wrap: wrap; gap: 6mm; align-content: flex-start; justify-content: center; box-shadow: 0 6px 20px rgba(69, 48, 92, .12); break-after: page; }
+  .page h2 { width: 100%; text-align: center; margin: 0 0 2mm; font-size: 22px; }
+  /* door hangers: hang them on real doors at home */
+  .hanger { position: relative; width: 58mm; height: 125mm; border-radius: 30mm 30mm 8mm 8mm; background: var(--c); border: 1mm dashed rgba(0, 0, 0, .25); display: flex; flex-direction: column; align-items: center; padding-top: 34mm; color: #fff; }
+  .hanger::before { content: ''; position: absolute; top: 8mm; left: 50%; width: 22mm; height: 22mm; margin-left: -11mm; border-radius: 50%; background: #fff; border: .6mm dashed rgba(0, 0, 0, .3); }
+  .hanger .sym { width: 38mm; height: 38mm; border-radius: 50%; background: #fff; display: grid; place-items: center; font-size: 26mm; margin-top: 2mm; }
+  .hanger .n { font-size: 24mm; font-weight: 700; line-height: 1.1; text-shadow: 0 1mm 0 rgba(0, 0, 0, .15); }
+  .hanger .name { font-size: 7mm; font-weight: 700; background: rgba(255, 255, 255, .9); color: var(--ink); padding: 1mm 4mm; border-radius: 99px; }
+  .hanger.dnd { background: #fff; color: var(--ink); border-color: var(--c); border-style: solid; }
+  .hanger.dnd .sym { background: #ffe2df; }
+  .hanger.dnd .t { font-size: 8mm; font-weight: 700; text-align: center; margin-top: 5mm; line-height: 1.2; }
+  .hanger.dnd .z { font-size: 12mm; margin-top: 3mm; }
+  /* key cards */
+  .key { width: 85mm; height: 54mm; border-radius: 5mm; background: linear-gradient(135deg, var(--c), var(--cd)); color: #fff; display: flex; align-items: center; gap: 5mm; padding: 5mm 7mm; position: relative; overflow: hidden; border: .5mm dashed rgba(0, 0, 0, .25); }
+  .key::after { content: '⭐ ⭐ ⭐'; position: absolute; bottom: 3mm; left: 6mm; font-size: 5mm; opacity: .8; }
+  .key .sym { width: 30mm; height: 30mm; border-radius: 50%; background: #fff; display: grid; place-items: center; font-size: 20mm; flex: none; }
+  .key .n { font-size: 20mm; font-weight: 700; line-height: 1; }
+  .key .h { font-size: 5mm; font-weight: 700; opacity: .95; }
+  .key .k { position: absolute; top: 3mm; left: 5mm; font-size: 9mm; }
+  /* menu */
+  .menu { width: 190mm; border-radius: 8mm; border: 1.2mm solid #ffab76; padding: 6mm; }
+  .menu h3 { margin: 0 0 4mm; text-align: center; font-size: 12mm; }
+  .menu .grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 3mm; }
+  .menu .f { display: flex; flex-direction: column; align-items: center; background: #fff5ec; border-radius: 5mm; padding: 2mm; }
+  .menu .f span { font-size: 16mm; line-height: 1.1; }
+  .menu .f b { font-size: 5.5mm; }
+  .sign { width: 190mm; height: 70mm; border-radius: 10mm; background: linear-gradient(#ffd166, #ffb23c); display: flex; align-items: center; justify-content: center; gap: 8mm; font-size: 26mm; font-weight: 700; color: #fff; text-shadow: 0 1.2mm 0 rgba(0, 0, 0, .15); }
+  .sign.pink { background: linear-gradient(#ff8fc0, #ff5fa2); font-size: 18mm; }
+  .sign.teal { background: linear-gradient(#8fe3cf, #4fc3a8); font-size: 18mm; }
+  .sign.orange { background: linear-gradient(#ffc39a, #ff9a5a); font-size: 18mm; }
+  @media print {
+    body { background: #fff; }
+    .intro { display: none; }
+    .page { margin: 0; box-shadow: none; }
+    @page { size: A4; margin: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="intro">
+  <h1>🖨️ מלון הכוכבים: דפים להדפסה</h1>
+  <p><b>שלטי דלת:</b> גוזרים ותולים על ידיות של דלתות אמיתיות בבית. כל חדר בבית הופך לחדר במלון. בצד השני מדביקים את השלט "לא להפריע".</p>
+  <p><b>כרטיסי מפתח:</b> נותנים לאורח בקבלה, כמו במלון אמיתי.</p>
+  <p><b>תפריט ושלטים:</b> לתחנת המטבח, לקבלה ולעגלת הניקיון.</p>
+  <button onclick="print()">🖨️ להדפיס</button>
+</div>
+<div id="pages"></div>
+<script type="module">
+  import { ROOMS, FOODS } from './js/data.js';
+  const pages = document.getElementById('pages');
+  const page = (title, html) => { const d = document.createElement('div'); d.className = 'page'; d.innerHTML = `<h2>${title}</h2>` + html; pages.append(d); };
+  const vars = (r) => `--c:${r.color};--cd:${r.dark};--cl:${r.light}`;
+  const hanger = (r) => `<div class="hanger" style="${vars(r)}"><div class="n">${r.n}</div><div class="sym">${r.sym}</div><div class="name" style="margin-top:4mm">${r.thing}</div></div>`;
+  const dnd = (r) => `<div class="hanger dnd" style="${vars(r)}"><div class="sym">🚫</div><div class="t">לא להפריע</div><div class="z">😴</div><div class="name" style="background:${r.color};color:#fff;margin-top:3mm">${r.sym} ${r.n}</div></div>`;
+  page('שלטי דלת (1)', ROOMS.slice(0, 3).map(hanger).join(''));
+  page('שלטי דלת (2)', ROOMS.slice(3).map(hanger).join(''));
+  page('לא להפריע (הצד השני של השלט)', ROOMS.slice(0, 3).map(dnd).join(''));
+  page('לא להפריע (2)', ROOMS.slice(3).map(dnd).join(''));
+  page('כרטיסי מפתח', ROOMS.map(r => `<div class="key" style="${vars(r)}"><span class="k">🔑</span><div class="sym">${r.sym}</div><div><div class="n">${r.n}</div><div class="h">${r.thing}</div><div class="h">מלון הכוכבים</div></div></div>`).join(''));
+  page('תפריט ושלטים', `<div class="menu"><h3>🍽️ תפריט</h3><div class="grid">${FOODS.map(f => `<div class="f"><span>${f.e}</span><b>${f.name}</b></div>`).join('')}</div></div>
+    <div class="sign">🛎️ קבלה</div>`);
+  page('שלטים לתחנות', `<div class="sign pink">⭐ מלון הכוכבים ⭐</div><div class="sign orange">🧑‍🍳 מטבח</div><div class="sign teal">🧹 ניקיון</div>`);
+</script>
+</body>
+</html>
