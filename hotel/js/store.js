@@ -133,7 +133,7 @@ export class Store {
     const code = this.code;
     const set = {};
     for (const k of this.pending) if (this.docs.has(k)) set[k] = this.docs.get(k);
-    fetch('../api/hotel', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code, id: this.id, set }) })
+    fetch('api/hotel', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code, id: this.id, set }) })
       .then(r => r.status === 503 ? { off: true } : r.ok ? r.json() : Promise.reject(r.status))
       .then(d => {
         if (code !== this.code) return;

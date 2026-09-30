@@ -1,0 +1,7 @@
+{
+  "name": "star-hotel",
+  "version": "1.0.0",
+  "description": "Star Hotel (מלון הכוכבים) - a multi-tablet hotel role-play game for little kids",
+  "private": true,
+  "type": "module"
+}
