@@ -1,302 +1,258 @@
-// Star Flight: start screen, stations, header, parents' settings and things everyone sees together
-// (the pilot's announcements, the safety show, turbulence, the country below, landing and the passport).
-import { Store } from './store.js';
-import { Flight } from './flight.js';
-import { STATIONS, PLACES, SAFETY, REAL, HOME, place } from './data.js';
-import { h, tap, speaker, modal, confetti, toast, bounce } from './ui.js';
-import { unlock, sfx, say, prefs, setPref } from './audio.js';
-import { checkinScreen } from './checkin.js';
-import { crewScreen } from './crew.js';
-import { pilotScreen } from './pilot.js';
-import { paxScreen } from './pax.js';
-import { tvScreen } from './tv.js';
+// Star Flight: one tablet that runs the flight while the family plays it for real in the living room.
+// Few words on screen; short spoken lines tell everyone what to do with their bodies and their chairs.
+import { PLACES, PEOPLE, SEATS, HOME, place } from './data.js';
+import { route, flightHours, profile, below, sayHours, clock } from './geo.js';
+import { mapView } from './map.js';
+import { h, tap, confetti, wait } from './ui.js';
+import { unlock, sfx, say, prefs, setPref, engine, lastSaid } from './audio.js';
 
-const SCREENS = { checkin: checkinScreen, crew: crewScreen, pilot: pilotScreen, pax: paxScreen, tv: tvScreen };
-
-// ---------------------------------------------------------------- family room code
-const urlCode = new URLSearchParams(location.search).get('room');
-let code = /^[0-9]{4,8}$/.test(urlCode || '') ? urlCode : localStorage.getItem('flight-code');
-if (!/^[0-9]{4,8}$/.test(code || '')) code = String(1000 + Math.floor(Math.random() * 9000));
-try { localStorage.setItem('flight-code', code); } catch (e) { /* ignore */ }
-
-const store = new Store(code);
-const flight = new Flight(store);
 const app = document.getElementById('app');
-window.flight = flight; // handy from the browser console
-let current = null;
-let role = 'home';
-
 document.addEventListener('pointerdown', unlock, { capture: true });
 
-// ---------------------------------------------------------------- header shown on every station
-function header(st) {
-  return h('header.bar',
-    tap(h('button.home', { 'aria-label': 'חזרה' }, '🏠'), () => go('home')),
-    h('div.bar-title', { style: { '--bg': st.bg } }, h('span.bar-e', st.e), h('span', st.name)),
-    h('div.bar-trip'),
-    h('div.bar-grow'),
-    h('div.net-dot', { title: 'חיבור' }),
-    passportButton(),
-  );
-}
-function passportButton() {
-  return tap(h('button.passport-btn', h('span', '🛂'), h('b.pp-n', '0')), openPassport, 'pop');
-}
+const load = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch (e) { return d; } };
+const save = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* private mode */ } };
 
-function updateBars() {
-  const st = flight.stamps();
-  const n = Object.keys(st.list || {}).filter(k => k !== HOME).length;
-  for (const b of document.querySelectorAll('.pp-n')) if (b.textContent !== String(n)) { b.textContent = n; bounce(b.parentElement); }
-  for (const d of document.querySelectorAll('.net-dot')) { d.dataset.mode = store.mode; d.title = store.mode === 'online' ? 'מחובר לחדר המשפחתי' : 'משחק רק במכשיר הזה'; }
-  const a = flight.from(), b = flight.to();
-  const trip = `${a.f} ✈️ ${b ? b.f : '❔'}`;
-  for (const t of document.querySelectorAll('.bar-trip')) if (t.textContent !== trip) t.textContent = trip;
-}
+// ---------------------------------------------------------------- the trip
+const trip = {
+  people: load('flight-people', []).filter(n => PEOPLE.some(p => p.name === n)),
+  from: load('flight-from', HOME),
+  to: null,
+  state: 'ground', // ground | air | landed
+  t0: 0, dur: 0, hours: 0,
+  fl() { return { state: this.state }; },
+  fromP() { return place(this.from); },
+  toP() { return this.to ? place(this.to) : null; },
+  where() {
+    const a = place(this.from), b = this.toP();
+    if (!b) return { p: 0, pos: a, alt: 0, speed: 0, heading: 90, left: 0, under: below(a.lat, a.lon) };
+    const r = route(a, b);
+    const p = this.state === 'air' ? Math.min(1, (Date.now() - this.t0) / this.dur) : this.state === 'landed' ? 1 : 0;
+    const pr = profile(this.state === 'air' ? Math.min(Math.max(p, 0.002), 0.985) : p, this.hours);
+    const pos = r.at(p);
+    return { p, pos, ...pr, heading: r.heading(p), left: this.hours * (1 - p), under: below(pos.lat, pos.lon), route: r };
+  },
+};
+// map.js reads the trip through the same names the map always used
+window.trip = trip; // handy from the browser console
+const forMap = { fl: () => trip.fl(), from: () => trip.fromP(), to: () => trip.toP(), where: () => trip.where() };
 
-// ---------------------------------------------------------------- navigation
-function go(id) {
-  current?.destroy?.();
-  current = null;
+const seatOf = (name) => SEATS[trip.people.indexOf(name) % SEATS.length];
+const person = (name) => PEOPLE.find(p => p.name === name);
+
+// ---------------------------------------------------------------- screen helpers
+let cleanup = [];
+function show(...kids) {
+  for (const fn of cleanup) fn();
+  cleanup = [];
   app.innerHTML = '';
-  role = id;
-  try { sessionStorage.setItem('flight-role', id); } catch (e) { /* ignore */ }
-  presence();
-  if (id === 'home') { current = homeScreen(); app.append(current.el); updateBars(); return; }
-  const st = STATIONS.find(s => s.id === id);
-  const screen = SCREENS[id]({ flight, store, go });
-  current = screen;
-  app.append(h('div.station.st-' + id, header(st), screen.el));
-  say(st.say);
-  screen.update?.();
-  updateBars();
+  app.append(h('div.screen', ...kids), corner());
+}
+const every = (ms, fn) => { const t = setInterval(fn, ms); cleanup.push(() => clearInterval(t)); return t; };
+const later = (ms, fn) => { const t = setTimeout(fn, ms); cleanup.push(() => clearTimeout(t)); return t; };
+const bigBtn = (label, fn, cls = '') => tap(h('button.go' + cls, label), fn, 'pop');
+
+// the small corner: say it again, and sound on/off
+function corner() {
+  const mute = tap(h('button.c-btn', prefs.voice ? '🔊' : '🔇'), () => { setPref('voice', !prefs.voice); setPref('sound', prefs.voice); mute.textContent = prefs.voice ? '🔊' : '🔇'; }, null);
+  return h('div.corner', tap(h('button.c-btn', '🔁'), () => say(lastSaid), null), mute);
 }
 
-function presence() {
-  store.set('dev:' + store.id, { role, t: store.time(), me: role === 'pax' ? sessionStorage.getItem('flight-me') : null });
-}
-setInterval(presence, 4000);
-setInterval(() => { try { flight.think(); } catch (e) { console.error(e); } }, 1000);
-window.addEventListener('pagehide', () => { store.set('dev:' + store.id, { role: 'away', t: 0 }); });
-
-store.on((what) => {
-  updateBars();
-  if (what !== 'mode') current?.update?.();
-});
-
-// ---------------------------------------------------------------- things everyone sees and hears together
-const speaks = () => flight.isNarrator();
-
-// a strip at the top of the screen that doesn't get in the way of playing
-function banner(e, text, ms = 5000) {
-  let box = document.getElementById('banners');
-  if (!box) { box = h('div', { id: 'banners' }); document.getElementById('fx').append(box); }
-  while (box.children.length >= 2) box.firstChild.remove();
-  const b = h('div.banner', h('span.bn-e', e), h('span.bn-t', text));
-  box.append(b);
-  setTimeout(() => { b.classList.add('out'); setTimeout(() => b.remove(), 500); }, ms);
+// ---------------------------------------------------------------- 1. start
+function home() {
+  engine(0);
+  show(
+    h('div.hero', h('div.cloud.a'), h('div.cloud.b'), h('div.hero-plane', '✈️')),
+    h('h1.title', 'טיסת הכוכבים'),
+    bigBtn('✈️ טסים!', who),
+    h('a.print', { href: 'print.html', target: '_blank' }, '🖨️ שלטים לכיסאות'),
+  );
 }
 
-let safetyEl = null;
-store.onEvent((ev, mine) => {
-  if (ev.type === 'pa') {
-    sfx('chime');
-    banner('📢', ev.text, 9000);
-    if (speaks()) setTimeout(() => say(ev.text, { rate: 0.92 }), 1100);
-  }
-  if (ev.type === 'safety' && role !== 'crew' && !(mine && ev.auto)) {
-    safetyEl?.remove(); safetyEl = null;
-    if (ev.step >= 0 && SAFETY[ev.step]) {
-      const st = SAFETY[ev.step];
-      safetyEl = h('div.safety-over', h('div.so-card', h('div.so-t', '🦺 הדיילת מראה:'), h('div.so-e', st.e), h('div.so-x', st.text)));
-      document.getElementById('fx').append(safetyEl);
-      const mineEl = safetyEl;
-      setTimeout(() => { if (safetyEl === mineEl) { mineEl.remove(); safetyEl = null; } }, 15000);
-    }
-  }
-  if (ev.type === 'turb') {
-    sfx('shake');
-    document.body.classList.remove('shaking'); void document.body.offsetWidth; document.body.classList.add('shaking');
-    setTimeout(() => document.body.classList.remove('shaking'), 3200);
-    banner('🌪️', REAL.bump.text);
-    if (speaks()) say(flight.cfg().real ? REAL.bump.say : 'מערבולת! כולם חוגרים חגורות');
-  }
-  if (ev.type === 'takeoff' && !mine) { sfx('roar'); if (speaks()) say('ממריאים! המטוס באוויר!'); }
-  if (ev.type === 'doors' && role !== 'crew') sfx('thud');
-  if (ev.type === 'landed') welcome(ev.to);
-  current?.onEvent?.(ev, mine);
-});
-
-// landing: welcome to the new country, and a stamp in the family passport
-function welcome(id) {
-  const p = place(id);
-  sfx('fanfare');
-  const stamp = h('div.stamp', { style: { '--r': (Math.random() * 16 - 8).toFixed(1) + 'deg' } }, h('span.st-f', p.f), h('b', p.city));
-  const m = modal(h('div.welcome',
-    h('div.wl-flag', p.f),
-    h('div.wl-t', `ברוכים הבאים ל${p.city}!`),
-    h('div.wl-e', p.e),
-    h('div.wl-hello', '👋 ', h('b', p.hello + '!'), speaker(`כאן אומרים ${p.hello}`)),
-    h('div.wl-fact', p.fact, speaker(p.fact)),
-    h('div.wl-pp', h('span.wl-book', '🛂'), stamp),
-  ), { cls: 'welcome-modal' });
-  confetti(innerWidth / 2, innerHeight / 3, 120);
-  setTimeout(() => confetti(innerWidth / 4, innerHeight / 2, 60), 700);
-  setTimeout(() => { stamp.classList.add('in'); sfx('stamp'); }, 2200);
-  if (speaks()) setTimeout(() => say(`נחתנו! ${flight.cfg().real ? 'כולם מוחאים כפיים! ' : ''}ברוכים הבאים ל${p.city}, ב${p.land}! כאן אומרים ${p.hello}! ${p.fact}. ${p.id === HOME ? '' : 'וקיבלנו חותמת בדרכון!'}`), 900);
-  setTimeout(() => m.close(), 16000);
+// ---------------------------------------------------------------- 2. who is flying (only real people)
+function who() {
+  const chosen = new Set(trip.people);
+  const go = bigBtn('✔', () => {
+    trip.people = PEOPLE.map(p => p.name).filter(n => chosen.has(n));
+    save('flight-people', trip.people);
+    where();
+  });
+  const refresh = () => { go.style.visibility = chosen.size ? '' : 'hidden'; };
+  show(
+    h('div.q', '🧑‍🤝‍🧑 מי טס?'),
+    h('div.faces', PEOPLE.map(p => {
+      const b = tap(h('button.face' + (chosen.has(p.name) ? '.on' : ''), h('span', p.e), h('b', p.name)), () => {
+        if (chosen.has(p.name)) chosen.delete(p.name); else { chosen.add(p.name); say(p.name); }
+        b.classList.toggle('on', chosen.has(p.name));
+        refresh();
+      }, 'pop');
+      return b;
+    })),
+    go,
+  );
+  refresh();
+  say('מי טס איתנו? לוחצים על מי שבא');
 }
 
-// the country below changes: a little banner on every screen, and the narrator says it out loud
-const tour = { key: '', said: new Set(), cand: '', n: 0, lastSay: 0, half: false, down: false };
-setInterval(() => {
-  const fl = flight.fl();
-  if (fl.state !== 'air') { tour.key = ''; return; }
-  const w = flight.where();
-  if (tour.key !== String(fl.t0)) { Object.assign(tour, { key: String(fl.t0), said: new Set([flight.from().land]), cand: '', n: 0, lastSay: 0, half: false, down: false }); }
-  const name = w.under.name;
-  if (name && name === tour.cand) tour.n++; else { tour.cand = name; tour.n = 0; }
-  const now = Date.now();
-  if (name && tour.n === 2 && !tour.said.has(name)) {
-    tour.said.add(name);
-    const sea = w.under.kind === 'sea';
-    banner(sea ? '🌊' : w.under.f, (sea ? 'מעל ' : 'עכשיו מעל ') + name, 6000);
-    if (speaks() && now - tour.lastSay > 9000) { tour.lastSay = now; say(sea ? `עכשיו אנחנו טסים מעל ${name}` : `עכשיו אנחנו מעל ${name}!`); }
-  }
-  if (!tour.half && w.p > 0.5 && w.p < 0.6) { tour.half = true; banner('✈️', 'חצי דרך!'); if (speaks()) say(`עברנו חצי דרך ל${flight.to().city}!`, { interrupt: false }); }
-  if (!tour.down && w.phase === 'descent') { tour.down = true; banner('🛬', 'מתחילים לרדת לנחיתה'); }
-  current?.tick?.();
-}, 1000);
-
-// ---------------------------------------------------------------- the family passport
-function openPassport() {
-  const st = flight.stamps();
-  const list = st.list || {};
-  const pages = h('div.pp-grid', PLACES.filter(p => p.id !== HOME).map(p => {
-    const n = list[p.id] || 0;
-    return tap(h('button.pp-stamp' + (n ? '.got' : ''), { style: { '--r': ((p.lat * 7) % 14 - 7).toFixed(1) + 'deg' } },
-      h('span.pp-f', n ? p.f : '❔'), h('span.pp-e', p.e), h('b', n ? p.city : ''), n > 1 ? h('i.pp-x', '×' + n) : null),
-    () => say(n ? `${p.city}, ב${p.land}! ${p.fact}` : `עוד לא טסנו ל${p.city}. אולי בפעם הבאה?`), 'pop');
-  }));
-  const got = Object.keys(list).filter(k => k !== HOME).length;
-  modal(h('div.passport', h('h2', '🛂 הדרכון שלנו ', speaker(`בדרכון יש ${got} חותמות. על כל נחיתה מקבלים חותמת`)), pages), { cls: 'wide' });
-  say(got ? `בדרכון יש ${got} חותמות!` : 'הדרכון עוד ריק. טסים ומקבלים חותמות!');
+// ---------------------------------------------------------------- 3. where to
+function where() {
+  const here = place(trip.from);
+  show(
+    h('div.q', here.f, ' ✈️ ❔'),
+    h('div.places', PLACES.filter(p => p.id !== here.id).map(p => tap(h('button.place', h('span.pl-e', p.e), h('span.pl-f', p.f), h('b', p.city)), async () => {
+      trip.to = p.id;
+      trip.hours = flightHours(here, p);
+      say(`טסים ל${p.city}!`);
+      await wait(1300);
+      board(0);
+    }, 'pop'))),
+  );
+  say('לאן טסים?');
 }
 
-// ---------------------------------------------------------------- start screen
-function homeScreen() {
-  const who = h('div.who-plays');
-  const trip = h('div.home-trip');
-  const el = h('div.start',
-    h('div.home-top',
-      h('div.home-stage', h('div.hs-sky'), h('div.hs-sun'), h('div.hs-cloud.a'), h('div.hs-cloud.b'), h('div.hs-cloud.c'), h('div.hs-plane', '✈️'), h('div.hs-ground'), h('div.hs-tower', '🏢')),
-      h('h1.title', h('span', 'טיסת'), h('span.title-2', 'הכוכבים'), h('span.title-stars', '✈️⭐')),
+// ---------------------------------------------------------------- 4. boarding: show each person their real chair
+function board(i) {
+  const name = trip.people[i];
+  if (!name) { belts(); return; }
+  const s = seatOf(name);
+  show(
+    h('div.board', { style: { '--c': s.color, '--cd': s.dark, '--cl': s.light } },
+      h('div.b-face', person(name).e),
+      h('div.b-arrow', '⬅️'),
+      h('div.b-seat', h('span', s.sym)),
     ),
-    trip,
-    h('div.home-q', h('span', 'מה עושים היום?'), speaker('מה עושים היום בטיסה? בוחרים תפקיד. אפשר לעבור בין התפקידים עם הבית')),
-    h('div.stations', STATIONS.map((st, i) => tap(
-      h('button.station-card', { style: { '--bg': st.bg, '--i': i } },
-        h('span.sc-e', st.e), h('span.sc-name', st.name), h('span.sc-live')),
-      () => go(st.id), 'pop'))),
-    who,
-    h('div.home-foot',
-      tap(h('button.chip', h('span', '🛂'), h('span.chip-t', 'הדרכון')), openPassport, 'pop'),
-      tap(h('button.chip.room-chip', h('span', '🏠'), h('span.chip-t', 'חדר משפחתי'), h('b.code', code), h('i.net-dot')), openCode),
-      holdButton(h('button.chip.parents', '⚙️ להורים (ללחוץ ולהחזיק)'), openSettings),
+    bigBtn('✔ ' + person(name).e + ' 💺', () => { sfx('click'); board(i + 1); }),
+  );
+  say(`${name}, ${s.thing}. הדיילת מראה ל${name} את הכיסא`);
+}
+
+// ---------------------------------------------------------------- 5. seat belts on
+function belts() {
+  show(
+    h('div.big-e.pulse', '🔒'),
+    bigBtn('✔ קליק!', () => { sfx('click'); takeoff(); }),
+  );
+  say('כולם חוגרים חגורה. קליק!');
+}
+
+// ---------------------------------------------------------------- 6. take-off: count down together
+async function takeoff() {
+  const n = h('div.count', '3');
+  const plane = h('div.rw-plane', '✈️');
+  show(h('div.runway', h('div.rw-lines'), plane), n);
+  engine(0.3);
+  say('מוכנים להמראה? סופרים יחד!');
+  await wait(2200);
+  for (const k of ['3', '2', '1']) { n.textContent = k; n.classList.remove('pop'); void n.offsetWidth; n.classList.add('pop'); say(k === '3' ? 'שלוש' : k === '2' ? 'שתיים' : 'אחת'); engine(0.4 + (3 - k) * 0.15); await wait(1100); }
+  n.textContent = '🚀';
+  sfx('roar');
+  plane.classList.add('up');
+  say('ממריאים! נשענים אחורה!');
+  await wait(2600);
+  trip.state = 'air';
+  trip.t0 = Date.now();
+  trip.dur = Math.min(5, Math.max(1.5, trip.hours * 0.4)) * 60000;
+  fly();
+}
+
+// ---------------------------------------------------------------- 7. the flight
+function fly() {
+  const a = trip.fromP(), b = trip.toP();
+  const map = mapView({ flight: forMap, big: true });
+  const flag = h('div.below-f'), name = h('div.below-n');
+  const alt = h('b'), left = h('b');
+  const track = h('div.track', h('i'), h('span.track-plane', '✈️'));
+  show(
+    h('div.trip', h('div.end', h('span', a.f), h('small', a.city)), track, h('div.end', h('span', b.f), h('small', b.city))),
+    h('div.fly',
+      h('div.fly-map', map.el),
+      h('div.fly-side',
+        tap(h('div.below', flag, name), () => { const u = trip.where().under; say(u.name ? `מתחתינו ${u.name}` : 'מתחתינו עננים'); }, null),
+        tap(h('div.stat', '⛰️ ', alt), () => say(`אנחנו בגובה ${trip.where().alt.toLocaleString('he-IL')} מטר. גבוה מעל העננים!`), null),
+        tap(h('div.stat', '⏱️ ', left), () => say(`עוד ${sayHours(trip.where().left)} מגיעים ל${b.city}`), null),
+      ),
+    ),
+    h('div.acts',
+      tap(h('button.act', '🍽️'), meal, null),
+      tap(h('button.act', '🌪️'), bumpy, null),
     ),
   );
-  const update = () => {
-    el.querySelector('.code').textContent = code;
-    const a = flight.from(), b = flight.to(), fl = flight.fl();
-    trip.textContent = `${a.f} ${a.city}  ✈️  ${b ? b.f + ' ' + b.city : '❔'}${fl.state === 'air' ? '  (בטיסה)' : fl.state === 'landed' ? '  (נחתנו)' : ''}`;
-    const roles = flight.liveRoles();
-    el.querySelectorAll('.station-card').forEach((btn, i) => {
-      const others = store.list('dev:').filter(d => d.by !== store.id && d.role === STATIONS[i].id && store.time() - d.t < 15000).length;
-      btn.querySelector('.sc-live').textContent = others ? '👀'.repeat(Math.min(others, 3)) : '';
-    });
-    who.textContent = roles.size > 1 ? 'עכשיו במשחק: ' + [...roles].map(r => STATIONS.find(s => s.id === r)?.e || '').join(' ') : '';
+  engine(0.12);
+  say(`שלום נוסעים! טסים מ${a.city} ל${b.city}. הטיסה לוקחת ${sayHours(trip.hours)}`);
+
+  const said = new Set([a.land]);
+  let cand = '', n = 0, lastSay = Date.now(), down = false, landing = false;
+  const tick = () => {
+    const w = trip.where();
+    map.update();
+    track.style.setProperty('--p', w.p.toFixed(4));
+    alt.textContent = w.alt.toLocaleString('he-IL');
+    left.textContent = clock(w.left);
+    const u = w.under;
+    const f = u.kind === 'sea' ? '🌊' : u.f || '☁️';
+    if (flag.textContent !== f) { flag.textContent = f; flag.classList.remove('pop'); void flag.offsetWidth; flag.classList.add('pop'); }
+    name.textContent = u.name || '';
+    // a new country below: say it (not too often)
+    if (u.name && u.name === cand) n++; else { cand = u.name; n = 0; }
+    if (u.name && n === 2 && !said.has(u.name) && Date.now() - lastSay > 8000 && !document.querySelector('.over')) {
+      said.add(u.name);
+      lastSay = Date.now();
+      say(`עכשיו אנחנו מעל ${u.name}!`);
+    }
+    if (!down && w.phase === 'descent') { down = true; say(`עוד מעט נוחתים ב${b.city}! חוזרים לכיסא וחוגרים`); }
+    if (!landing && w.p >= 1) { landing = true; land(); }
   };
-  update();
-  return { el, update };
+  every(500, tick);
+  tick();
 }
 
-function holdButton(btn, fn) {
-  let t = 0;
-  const start = (e) => { e.preventDefault(); btn.classList.add('holding'); t = setTimeout(() => { btn.classList.remove('holding'); fn(); }, 1200); };
-  const stop = () => { clearTimeout(t); btn.classList.remove('holding'); };
-  btn.addEventListener('pointerdown', start);
-  btn.addEventListener('pointerup', stop);
-  btn.addEventListener('pointerleave', stop);
-  btn.addEventListener('pointercancel', stop);
-  btn.addEventListener('contextmenu', (e) => e.preventDefault());
-  return btn;
+// little moments during the flight: a pop-up over the map, then back to flying
+function moment(e, text, ms) {
+  const o = h('div.over', h('div.over-e', e), text ? h('div.over-t', text) : null);
+  app.append(o);
+  later(ms, () => { o.classList.add('out'); setTimeout(() => o.remove(), 400); });
+}
+function meal() {
+  sfx('chime');
+  moment('🍽️', trip.people.map(n => person(n).e).join(' '), 7000);
+  say('זמן לאכול! הדיילת מביאה לכל נוסע משהו לאכול ולשתות');
+}
+function bumpy() {
+  sfx('shake');
+  document.body.classList.remove('shaking'); void document.body.offsetWidth; document.body.classList.add('shaking');
+  setTimeout(() => document.body.classList.remove('shaking'), 3000);
+  moment('🌪️', '', 3000);
+  say('מערבולת! קופצים על הכיסא!');
 }
 
-// ---------------------------------------------------------------- family room number (a big keypad)
-function openCode() {
-  let typed = '';
-  const disp = h('div.code-disp', code);
-  const setDisp = () => { disp.textContent = typed || code; disp.classList.toggle('typing', !!typed); };
-  const keys = h('div.keypad', [1, 2, 3, 4, 5, 6, 7, 8, 9, '⌫', 0, '✔'].map(k => tap(h('button.key' + (k === '✔' ? '.ok' : ''), String(k)), () => {
-    if (k === '⌫') typed = typed.slice(0, -1);
-    else if (k === '✔') {
-      if (typed.length >= 4) { code = typed; try { localStorage.setItem('flight-code', code); } catch (e) { /* */ } store.setCode(code); m.close(); sfx('yay'); toast('🏠', 'עברנו לחדר ' + code, { speak: 'עברנו לחדר המשפחתי' }); current?.update?.(); }
-      else { disp.classList.add('wiggle'); sfx('nope'); setTimeout(() => disp.classList.remove('wiggle'), 500); }
-      return;
-    } else if (typed.length < 8) typed += k;
-    setDisp();
-  })));
-  const m = modal(h('div.code-card',
-    h('h2', '🏠 חדר משפחתי'),
-    h('p', 'כל המכשירים עם אותו מספר משחקים באותה טיסה. אפשר לכתוב כאן את המספר שמופיע במכשיר השני.'),
-    disp, keys,
-    h('p.small', store.mode === 'online' ? '🟢 מחובר, המכשירים מסתנכרנים' : store.mode === 'connecting' ? '🟡 מתחבר…' : '🟠 כרגע הטיסה שמורה רק במכשיר הזה (אפשר לפתוח כמה לשוניות).'),
-  ));
+// ---------------------------------------------------------------- 8. landing and arriving
+async function land() {
+  trip.state = 'landed';
+  const b = trip.toP();
+  show(h('div.runway.land', h('div.rw-lines'), h('div.rw-plane.down', '✈️')), h('div.count', '🛬'));
+  say('נוחתים!');
+  await wait(2600);
+  sfx('thud'); await wait(300); sfx('thud');
+  engine(0);
+  await wait(500);
+  trip.from = b.id;
+  save('flight-from', trip.from);
+  show(
+    h('div.arrive',
+      h('div.ar-flag', b.f),
+      h('div.ar-e', b.e),
+      tap(h('div.ar-hello', '👋 ', b.hello, '!'), () => say(`ב${b.land} אומרים ${b.hello}`), null),
+    ),
+    h('div.row',
+      b.id !== HOME ? bigBtn('🏠', () => { trip.state = 'ground'; trip.to = HOME; trip.hours = flightHours(b, place(HOME)); say('טסים הביתה!'); setTimeout(() => board(0), 1200); }, '.home-go') : null,
+      bigBtn('✈️', () => { trip.state = 'ground'; trip.to = null; where(); }),
+    ),
+  );
+  confetti(innerWidth / 2, innerHeight / 3, 120);
+  sfx('fanfare');
+  say(b.id === HOME ? `נחתנו! כולם מוחאים כפיים! ${b.fact}` : `נחתנו ב${b.city}! כולם מוחאים כפיים! כאן אומרים ${b.hello}. ${b.fact}`);
 }
 
-// ---------------------------------------------------------------- parents' settings
-function openSettings() {
-  sfx('pop');
-  const setCfg = (part) => { store.set('cfg', { ...flight.cfg(), ...part }); render(); };
-  const box = h('div.settings');
-  const seg = (label, opts, val, on) => h('div.set-row', h('span.set-l', label), h('div.seg', opts.map(([v, t]) => tap(h('button' + (v === val ? '.on' : ''), t), () => on(v)))));
-  const render = () => {
-    const c = flight.cfg();
-    box.innerHTML = '';
-    box.append(
-      h('h2', '⚙️ הגדרות להורים'),
-      seg('כיסאות במטוס', [[4, '4'], [6, '6'], [8, '8']], flight.seatCount(), v => setCfg({ seats: v })),
-      seg('נוסעים דמיוניים (חיות)', [[true, 'כן'], [false, 'לא']], c.npc, v => setCfg({ npc: v })),
-      seg('אורך הטיסה במשחק', [['short', '🐇 קצר'], ['normal', '🙂 רגיל'], ['long', '🐢 ארוך']], c.pace, v => setCfg({ pace: v })),
-      h('p.small', 'רגיל: בערך 50 שניות לכל שעת טיסה אמיתית (פריז: כ-4 דקות, ניו יורק: כ-9 דקות). קצר: חצי מזה, ארוך: פי 2.'),
-      seg('משימות אמיתיות בבית', [[true, 'כן'], [false, 'לא']], c.real, v => setCfg({ real: v })),
-      seg('קול מדבר', [[true, '🗣️ כן'], [false, 'לא']], prefs.voice, v => { setPref('voice', v); render(); }),
-      seg('צלילים', [[true, '🔊 כן'], [false, 'לא']], prefs.sound, v => { setPref('sound', v); render(); }),
-      seg('מוזיקת רקע', [[true, '🎵 כן'], [false, 'לא']], prefs.music, v => { setPref('music', v); render(); }),
-      h('div.set-row', h('a.btn.print', { href: 'print.html', target: '_blank' }, '🖨️ דף להדפסה: שלטי כיסאות, כרטיסי עלייה, כנפי טייסת ותפריט')),
-      h('details.howto', h('summary', 'איך משחקים?'),
-        h('p', 'כל מכשיר בוחר תפקיד: 🎫 צ\'ק-אין, 💁‍♀️ דיילת, 👩‍✈️ טייסת, 💺 נוסעים, או 🗺️ מסך המפה (טוב לטלוויזיה או למחשב). אפשר לשחק גם במכשיר אחד ולעבור בין התפקידים עם כפתור 🏠. תפקיד שאף אחד לא משחק קורה "בקסם".'),
-        h('p', 'מסדרים כיסאות בבית כמו במטוס, שתיים ושתיים עם מעבר באמצע, ומדביקים על כל כיסא את השלט שלו מדף ההדפסה (צבע וציור). בצ\'ק-אין מוסיפים את אמא, אבא ואפילו בובות, שוקלים תיק אמיתי ונותנים כרטיס עלייה. הדיילת סורקת את הכרטיס ומלווה כל נוסע לכיסא האמיתי שלו.'),
-        h('p', 'הטייסת בוחרת יעד במפה, עוברת על רשימת הבדיקות, מדליקה מנועים, דוחפת את הגז ומושכת למעלה. בזמן הטיסה כל המסכים מראים מעל איזו ארץ טסים (עם הדגל), באיזה גובה, באיזו מהירות וכמה זמן נשאר. ההתקדמות מבוססת על המסלול האמיתי בין שדות התעופה.'),
-        h('p', 'בטיסה הנוסעים מזמינים מהדיילת, והדיילת מכינה מגש ומביאה לכיסא (אפשר כוס מים אמיתית). לפני הנחיתה אוספים מגשים ובודקים חגורות, ובסוף הטייסת מורידה גלגלים ונוחתת. על כל נחיתה מקבלים חותמת בדרכון המשפחתי 🛂.'),
-        h('p', 'כדי שכמה מכשירים ישחקו יחד, כולם צריכים אותו מספר "חדר משפחתי" (בכפתור 🏠 במסך הפתיחה).'),
-      ),
-      h('div.set-row.danger',
-        tap(h('button.btn.reset', '🧽 טיסה חדשה מההתחלה (מוחק נוסעים)'), () => {
-          if (confirm('למחוק את כל הנוסעים והטיסה ולהתחיל מחדש בתל אביב?')) { flight.resetAll(); sfx('whoosh'); toast('✈️', 'מתחילים מחדש!', { speak: 'מתחילים מחדש!' }); render(); }
-        }),
-        tap(h('button.btn.reset', '🛂 לרוקן את הדרכון'), () => {
-          if (confirm('למחוק את כל החותמות מהדרכון?')) { flight.resetPassport(); render(); }
-        }),
-      ),
-    );
-  };
-  render();
-  modal(box, { cls: 'wide' });
-}
-
-// ---------------------------------------------------------------- start
-const lastRole = sessionStorage.getItem('flight-role');
-go(lastRole && (lastRole === 'home' || SCREENS[lastRole]) ? lastRole : 'home');
+home();
 
 // service worker for playing offline and installing on the home screen
 if ('serviceWorker' in navigator && location.protocol === 'https:' && window.top === window) {

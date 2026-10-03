@@ -67,40 +67,23 @@
 </head>
 <body>
 <div class="intro">
-  <h1>🖨️ טיסת הכוכבים: דפים להדפסה</h1>
-  <p><b>שלטי כיסאות:</b> מסדרים כיסאות בבית כמו במטוס: שניים ושניים, ומעבר באמצע. על הגב של כל כיסא מדביקים שלט (צבע, ציור ומספר). אלה אותם צבעים וציורים שבמשחק.</p>
-  <p><b>כרטיסי עלייה:</b> בצ'ק-אין נותנים לכל נוסע את הכרטיס בצבע של הכיסא שלו. בעיגול מציירים את הפנים של הנוסע, ובמלבנים את הדגלים (מאיפה ולאן).</p>
-  <p><b>תגים ושלטים:</b> תג לטייסת ולדיילת, כנפיים לטייסת, שלט חגורות, שלטי יציאה ושלט לשער העלייה.</p>
-  <p><b>תפריט ודרכון:</b> התפריט לעגלת הדיילת. בדרכון מציירים או מדביקים מדבקה על כל מקום שנחתנו בו.</p>
+  <h1>🖨️ טיסת הכוכבים: שלטים לכיסאות</h1>
+  <p>מסדרים כיסאות בבית כמו במטוס, ומדביקים על כל כיסא שלט. הכיסא הראשון לנוסע הראשון שנבחר במשחק, השני לשני, וכן הלאה. אותם צבעים וציורים שבמשחק.</p>
+  <p>כרטיסי העלייה: לכל נוסע הכרטיס בצבע של הכיסא שלו. בעיגול מציירים את הפנים.</p>
   <button onclick="print()">🖨️ להדפיס</button>
 </div>
 <div id="pages"></div>
 <script type="module">
-import { SEATS, MENU, PLACES, HOME } from './js/data.js';
+import { SEATS } from './js/data.js';
 const el = (html) => { const d = document.createElement('div'); d.innerHTML = html; return d.firstElementChild; };
 const pages = document.getElementById('pages');
 const page = (title, items) => pages.append(el(`<div class="page"><h2>${title}</h2>${items.join('')}</div>`));
 const style = (s) => `--c:${s.color};--cd:${s.dark};--cl:${s.light}`;
-
-page('💺 שלטי כיסאות (1)', SEATS.slice(0, 4).map(s => `<div class="seat" style="${style(s)}"><div class="sym">${s.sym}</div><div class="n">${s.n}</div><div class="t">${s.thing}</div></div>`));
-page('💺 שלטי כיסאות (2)', SEATS.slice(4).map(s => `<div class="seat" style="${style(s)}"><div class="sym">${s.sym}</div><div class="n">${s.n}</div><div class="t">${s.thing}</div></div>`));
+const sign = (s) => `<div class="seat" style="${style(s)}"><div class="sym">${s.sym}</div><div class="n">${s.n}</div></div>`;
+page('💺 שלטים לכיסאות (1)', SEATS.slice(0, 4).map(sign));
+page('💺 שלטים לכיסאות (2)', SEATS.slice(4).map(sign));
 page('🎫 כרטיסי עלייה', SEATS.map(s => `<div class="pass" style="${style(s)}"><div class="top"><span>✈️ כרטיס עלייה</span><span>⭐</span></div>
   <div class="body"><div class="face">הפנים<br>שלי</div><div class="route"><div class="flag"></div>✈️<div class="flag"></div></div><div class="st">${s.sym}<b>${s.n}</b></div></div><div class="bar"></div></div>`));
-page('👩‍✈️ תגים ושלטים', [
-  `<div class="wings">🪽 ⭐ טייסת ⭐ 🪽</div>`,
-  `<div class="badge" style="--c:#3fa4e8;--cd:#1f78b8"><div class="e">👩‍✈️</div><div><div class="t">טייסת</div><div class="s">קברניטית המטוס</div></div></div>`,
-  `<div class="badge" style="--c:#ff7eb6;--cd:#e0508f"><div class="e">💁‍♀️</div><div><div class="t">דיילת</div><div class="s">צוות המטוס</div></div></div>`,
-  `<div class="badge" style="--c:#ffc93c;--cd:#e0a100"><div class="e">🎫</div><div><div class="t">צ'ק-אין</div><div class="s">שדה התעופה</div></div></div>`,
-  `<div class="badge" style="--c:#5fd068;--cd:#2f9e3a"><div class="e">💺</div><div><div class="t">נוסע</div><div class="s">טיסת הכוכבים</div></div></div>`,
-  `<div class="sign belt"><span>🔒</span>חגורות</div>`,
-  `<div class="sign gate"><span>🚪</span>שער עלייה</div>`,
-  `<div class="sign exit"><span>🏃</span>יציאה</div>`,
-  `<div class="sign exit"><span>🏃</span>יציאה</div>`,
-]);
-pages.append(el(`<div class="page"><h2>🛒 תפריט ודרכון</h2>
-  <div class="menu"><h3>🛒 מה יש בעגלה?</h3><div class="grid">${MENU.map(m => `<div class="f"><span>${m.e}</span><b>${m.name}</b></div>`).join('')}</div></div>
-  <div class="passport"><h3>🛂 הדרכון שלנו</h3><div class="grid">${PLACES.filter(p => p.id !== HOME).map(p => `<div class="stp"><span>${p.e}</span><b>${p.city}</b></div>`).join('')}</div></div>
-</div>`));
 </script>
 </body>
 </html>

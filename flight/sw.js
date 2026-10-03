@@ -1,10 +1,8 @@
 // Offline support for Star Flight: keep the game files in a cache.
 // Online: network first (so updates show up); offline: play from the cache.
-// The live flight data (/api/) is never cached.
-const CACHE = 'star-flight-v1';
+const CACHE = 'star-flight-v2';
 const CORE = ['./', './index.html', './style.css', './manifest.webmanifest', './print.html',
-  './js/main.js', './js/store.js', './js/flight.js', './js/data.js', './js/ui.js', './js/audio.js', './js/geo.js', './js/world.js', './js/map.js', './js/parts.js',
-  './js/checkin.js', './js/crew.js', './js/pilot.js', './js/pax.js', './js/tv.js',
+  './js/main.js', './js/data.js', './js/ui.js', './js/audio.js', './js/geo.js', './js/world.js', './js/map.js',
   './icons/icon-192.png', './icons/icon-512.png', './icons/apple-touch-icon.png'];
 
 self.addEventListener('install', (e) => {
