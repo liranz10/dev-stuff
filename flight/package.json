@@ -1,0 +1,7 @@
+{
+  "name": "star-flight",
+  "version": "1.0.0",
+  "description": "Star Flight (טיסת הכוכבים) - a multi-tablet airplane role-play game for little kids",
+  "private": true,
+  "type": "module"
+}

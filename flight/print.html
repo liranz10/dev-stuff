@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>טיסת הכוכבים: דפים להדפסה</title>
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root { --ink: #2f3a66; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: 'Fredoka', 'Varela Round', system-ui, sans-serif; color: var(--ink); background: #eaf4ff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .intro { max-width: 820px; margin: 20px auto; background: #fff; border-radius: 20px; padding: 20px 26px; box-shadow: 0 6px 20px rgba(47, 58, 102, .12); }
+  .intro h1 { margin: 0 0 6px; }
+  .intro p { margin: 6px 0; font-size: 17px; line-height: 1.5; }
+  .intro button { font: inherit; font-size: 20px; font-weight: 700; border: 0; background: #3fa4e8; color: #fff; padding: 10px 26px; border-radius: 999px; cursor: pointer; margin-top: 8px; }
+  .page { width: 210mm; min-height: 297mm; margin: 16px auto; background: #fff; padding: 10mm; display: flex; flex-wrap: wrap; gap: 6mm; align-content: flex-start; justify-content: center; box-shadow: 0 6px 20px rgba(47, 58, 102, .12); break-after: page; }
+  .page h2 { width: 100%; text-align: center; margin: 0 0 2mm; font-size: 22px; }
+  /* seat signs: tape one on the back of each chair */
+  .seat { width: 90mm; height: 125mm; border-radius: 14mm 14mm 6mm 6mm; background: var(--c); border: 1mm dashed rgba(0, 0, 0, .25); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3mm; color: #fff; }
+  .seat .sym { width: 56mm; height: 56mm; border-radius: 50%; background: #fff; display: grid; place-items: center; font-size: 38mm; }
+  .seat .n { font-size: 26mm; font-weight: 700; line-height: 1; text-shadow: 0 1mm 0 rgba(0, 0, 0, .15); }
+  .seat .t { font-size: 6mm; font-weight: 700; background: rgba(255, 255, 255, .9); color: var(--ink); padding: 1mm 5mm; border-radius: 99px; }
+  /* boarding passes */
+  .pass { width: 92mm; height: 58mm; border-radius: 5mm; background: #fff; border: 1mm solid var(--c); overflow: hidden; display: flex; flex-direction: column; }
+  .pass .top { background: var(--c); color: #fff; font-weight: 700; font-size: 5mm; padding: 1.5mm 4mm; display: flex; justify-content: space-between; }
+  .pass .body { flex: 1; display: flex; align-items: center; gap: 3mm; padding: 2mm 4mm; }
+  .pass .face { width: 24mm; height: 24mm; border-radius: 50%; border: .6mm dashed #aab; display: grid; place-items: center; font-size: 4mm; color: #aab; text-align: center; }
+  .pass .route { flex: 1; display: flex; align-items: center; justify-content: center; gap: 2mm; font-size: 8mm; }
+  .pass .flag { width: 16mm; height: 11mm; border: .6mm dashed #aab; border-radius: 2mm; }
+  .pass .st { display: flex; flex-direction: column; align-items: center; background: var(--cl); border: .8mm solid var(--c); border-radius: 4mm; padding: 1mm 3mm; font-size: 10mm; line-height: 1.1; }
+  .pass .st b { font-size: 6mm; }
+  .pass .bar { height: 7mm; margin: 0 4mm 3mm; background: repeating-linear-gradient(90deg, #333 0 .5mm, transparent .5mm 1mm, #333 1mm 1.8mm, transparent 1.8mm 2.4mm); opacity: .7; }
+  /* badges and signs */
+  .badge { width: 85mm; height: 55mm; border-radius: 6mm; background: linear-gradient(135deg, var(--c), var(--cd)); color: #fff; display: flex; align-items: center; gap: 4mm; padding: 4mm 6mm; border: .5mm dashed rgba(0, 0, 0, .25); }
+  .badge .e { width: 34mm; height: 34mm; border-radius: 50%; background: #fff; display: grid; place-items: center; font-size: 24mm; flex: none; }
+  .badge .t { font-size: 10mm; font-weight: 700; line-height: 1.1; }
+  .badge .s { font-size: 5mm; opacity: .95; }
+  .wings { width: 190mm; height: 40mm; display: flex; align-items: center; justify-content: center; gap: 4mm; font-size: 14mm; font-weight: 700; color: #b8860b; background: linear-gradient(#fff8d6, #ffe48a); border-radius: 20mm; border: 1mm solid #e0a100; }
+  .sign { width: 92mm; height: 62mm; border-radius: 8mm; display: flex; flex-direction: column; align-items: center; justify-content: center; font-weight: 700; font-size: 11mm; color: #fff; text-shadow: 0 .8mm 0 rgba(0, 0, 0, .2); }
+  .sign span { font-size: 26mm; line-height: 1.1; text-shadow: none; }
+  .sign.belt { background: #2b2f3c; color: #ffe27a; }
+  .sign.exit { background: #2fa84f; }
+  .sign.wc { background: #3fa4e8; }
+  .sign.gate { background: #ff7eb6; }
+  /* menu */
+  .menu { width: 190mm; border-radius: 8mm; border: 1.2mm solid #3fa4e8; padding: 6mm; }
+  .menu h3 { margin: 0 0 4mm; text-align: center; font-size: 12mm; }
+  .menu .grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3mm; }
+  .menu .f { display: flex; flex-direction: column; align-items: center; background: #eef7ff; border-radius: 5mm; padding: 2mm; }
+  .menu .f span { font-size: 14mm; line-height: 1.1; }
+  .menu .f b { font-size: 4.5mm; }
+  /* passport */
+  .passport { width: 190mm; border-radius: 8mm; background: #5b6bd6; padding: 6mm; color: #fff; }
+  .passport h3 { margin: 0 0 4mm; text-align: center; font-size: 12mm; }
+  .passport .grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4mm; background: #fff; border-radius: 5mm; padding: 5mm; }
+  .passport .stp { aspect-ratio: 1; border-radius: 50%; border: .8mm dashed #c4cae6; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--ink); }
+  .passport .stp span { font-size: 12mm; line-height: 1.1; }
+  .passport .stp b { font-size: 4mm; }
+  @media print {
+    body { background: #fff; }
+    .intro { display: none; }
+    .page { margin: 0; box-shadow: none; }
+    @page { size: A4; margin: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="intro">
+  <h1>🖨️ טיסת הכוכבים: דפים להדפסה</h1>
+  <p><b>שלטי כיסאות:</b> מסדרים כיסאות בבית כמו במטוס: שניים ושניים, ומעבר באמצע. על הגב של כל כיסא מדביקים שלט (צבע, ציור ומספר). אלה אותם צבעים וציורים שבמשחק.</p>
+  <p><b>כרטיסי עלייה:</b> בצ'ק-אין נותנים לכל נוסע את הכרטיס בצבע של הכיסא שלו. בעיגול מציירים את הפנים של הנוסע, ובמלבנים את הדגלים (מאיפה ולאן).</p>
+  <p><b>תגים ושלטים:</b> תג לטייסת ולדיילת, כנפיים לטייסת, שלט חגורות, שלטי יציאה ושלט לשער העלייה.</p>
+  <p><b>תפריט ודרכון:</b> התפריט לעגלת הדיילת. בדרכון מציירים או מדביקים מדבקה על כל מקום שנחתנו בו.</p>
+  <button onclick="print()">🖨️ להדפיס</button>
+</div>
+<div id="pages"></div>
+<script type="module">
+import { SEATS, MENU, PLACES, HOME } from './js/data.js';
+const el = (html) => { const d = document.createElement('div'); d.innerHTML = html; return d.firstElementChild; };
+const pages = document.getElementById('pages');
+const page = (title, items) => pages.append(el(`<div class="page"><h2>${title}</h2>${items.join('')}</div>`));
+const style = (s) => `--c:${s.color};--cd:${s.dark};--cl:${s.light}`;
+
+page('💺 שלטי כיסאות (1)', SEATS.slice(0, 4).map(s => `<div class="seat" style="${style(s)}"><div class="sym">${s.sym}</div><div class="n">${s.n}</div><div class="t">${s.thing}</div></div>`));
+page('💺 שלטי כיסאות (2)', SEATS.slice(4).map(s => `<div class="seat" style="${style(s)}"><div class="sym">${s.sym}</div><div class="n">${s.n}</div><div class="t">${s.thing}</div></div>`));
+page('🎫 כרטיסי עלייה', SEATS.map(s => `<div class="pass" style="${style(s)}"><div class="top"><span>✈️ כרטיס עלייה</span><span>⭐</span></div>
+  <div class="body"><div class="face">הפנים<br>שלי</div><div class="route"><div class="flag"></div>✈️<div class="flag"></div></div><div class="st">${s.sym}<b>${s.n}</b></div></div><div class="bar"></div></div>`));
+page('👩‍✈️ תגים ושלטים', [
+  `<div class="wings">🪽 ⭐ טייסת ⭐ 🪽</div>`,
+  `<div class="badge" style="--c:#3fa4e8;--cd:#1f78b8"><div class="e">👩‍✈️</div><div><div class="t">טייסת</div><div class="s">קברניטית המטוס</div></div></div>`,
+  `<div class="badge" style="--c:#ff7eb6;--cd:#e0508f"><div class="e">💁‍♀️</div><div><div class="t">דיילת</div><div class="s">צוות המטוס</div></div></div>`,
+  `<div class="badge" style="--c:#ffc93c;--cd:#e0a100"><div class="e">🎫</div><div><div class="t">צ'ק-אין</div><div class="s">שדה התעופה</div></div></div>`,
+  `<div class="badge" style="--c:#5fd068;--cd:#2f9e3a"><div class="e">💺</div><div><div class="t">נוסע</div><div class="s">טיסת הכוכבים</div></div></div>`,
+  `<div class="sign belt"><span>🔒</span>חגורות</div>`,
+  `<div class="sign gate"><span>🚪</span>שער עלייה</div>`,
+  `<div class="sign exit"><span>🏃</span>יציאה</div>`,
+  `<div class="sign exit"><span>🏃</span>יציאה</div>`,
+]);
+pages.append(el(`<div class="page"><h2>🛒 תפריט ודרכון</h2>
+  <div class="menu"><h3>🛒 מה יש בעגלה?</h3><div class="grid">${MENU.map(m => `<div class="f"><span>${m.e}</span><b>${m.name}</b></div>`).join('')}</div></div>
+  <div class="passport"><h3>🛂 הדרכון שלנו</h3><div class="grid">${PLACES.filter(p => p.id !== HOME).map(p => `<div class="stp"><span>${p.e}</span><b>${p.city}</b></div>`).join('')}</div></div>
+</div>`));
+</script>
+</body>
+</html>
