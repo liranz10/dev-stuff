@@ -17,13 +17,21 @@ export const HOME = 'tlv';
 
 // the real people at home; each one gets a seat with a colour and a symbol (printable signs in print.html)
 export const PEOPLE = [
-  { e: '👩', name: 'אמא' },
-  { e: '👨', name: 'אבא' },
-  { e: '👧', name: 'יובל' },
-  { e: '👧🏼', name: 'עלמה' },
-  { e: '👵', name: 'סבתא' },
-  { e: '👴', name: 'סבא' },
+  { e: '👩', name: 'אמא', f: true },
+  { e: '👨', name: 'אבא', f: false },
+  { e: '👧', name: 'יובל', f: true },
+  { e: '👧🏼', name: 'עלמה', f: true },
+  { e: '👵', name: 'סבתא', f: true },
+  { e: '👴', name: 'סבא', f: false },
 ];
+
+// who does what on the plane; tap a face to change its job
+export const ROLES = {
+  pilot: { e: '👩‍✈️', f: 'טייסת', m: 'טייס', group: 'הטייסים', color: '#3fa4e8' },
+  crew: { e: '💁‍♀️', f: 'דיילת', m: 'דייל', group: 'הדיילים', color: '#ff7eb6' },
+  pax: { e: '💺', f: 'נוסעת', m: 'נוסע', group: 'הנוסעים', color: '#5fd068' },
+};
+export const ROLE_ORDER = ['pax', 'pilot', 'crew'];
 
 export const SEATS = [
   { n: 1, color: '#ff7eb6', dark: '#d94a8c', light: '#ffe0ef', sym: '🌸', thing: 'הכיסא הוורוד עם הפרח' },

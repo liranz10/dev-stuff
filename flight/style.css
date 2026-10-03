@@ -135,3 +135,37 @@ body.shaking #app { animation: shake .18s 16; }
 .confetti { position: absolute; width: 11px; height: 15px; border-radius: 3px; }
 .spark { position: absolute; font-style: normal; font-size: 26px; }
 .flyer { position: absolute; font-style: normal; line-height: 1; }
+
+/* ============================================================ jobs and missions */
+.jobs { display: flex; flex-wrap: wrap; justify-content: center; gap: 18px; max-width: 900px; }
+.job { position: relative; display: flex; flex-direction: column; align-items: center; width: 160px; background: #fff; border-radius: 28px; padding: 10px 6px 8px; border: 6px solid var(--rc); box-shadow: 0 6px 0 rgba(47, 58, 102, .13); }
+.job:active { transform: translateY(4px); box-shadow: none; }
+.j-face { font-size: 84px; line-height: 1.1; }
+.j-role { position: absolute; top: -14px; left: -14px; width: 60px; height: 60px; border-radius: 50%; background: var(--rc); display: grid; place-items: center; font-size: 36px; box-shadow: 0 3px 0 rgba(0, 0, 0, .15); }
+.job b { font-size: 24px; color: var(--rc); }
+
+.team { display: flex; align-items: center; gap: 10px; flex: none; background: rgba(255, 255, 255, .85); border-radius: 999px; padding: 6px 14px; box-shadow: 0 4px 0 rgba(47, 58, 102, .1); }
+.member { position: relative; width: 58px; height: 58px; border-radius: 50%; background: #fff; border: 4px solid var(--rc); display: grid; place-items: center; }
+.m-face { font-size: 34px; }
+.m-role { position: absolute; bottom: -8px; left: -8px; font-size: 22px; }
+.team-stars { display: flex; gap: 10px; margin-inline-start: 10px; }
+.ts { display: flex; align-items: center; gap: 2px; font-size: 26px; }
+.ts b { font-size: 20px; display: inline-block; }
+
+.gate { display: flex; flex-direction: column; align-items: center; gap: 2vh; }
+.g-sign { background: #2f3a66; color: #ffe27a; font-size: clamp(30px, 5vw, 46px); font-weight: 700; padding: 8px 30px; border-radius: 18px; box-shadow: 0 0 0 5px #fff, 0 0 0 9px #2f3a66; }
+.g-plane { font-size: clamp(120px, 22vw, 200px); line-height: 1; animation: floaty 3s infinite; }
+
+.over.msn { background: rgba(47, 58, 102, .45); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); }
+.mission { display: flex; flex-direction: column; align-items: center; gap: 2vh; background: #fff; border-radius: 40px; padding: 20px 40px 26px; border: 8px solid var(--rc); box-shadow: 0 10px 0 rgba(0, 0, 0, .15); animation: popin .45s; max-width: 94vw; }
+.ms-who { display: flex; align-items: center; gap: 10px; background: var(--rc); border-radius: 999px; padding: 6px 18px 6px 10px; }
+.ms-role { font-size: 48px; }
+.ms-face { font-size: 54px; background: #fff; border-radius: 50%; width: 72px; height: 72px; display: grid; place-items: center; }
+.ms-e { font-size: clamp(120px, 24vw, 210px); line-height: 1.1; animation: pulse 1.6s infinite; }
+.mission .board { margin: 1vh 0; }
+.mission .b-face { font-size: clamp(90px, 14vw, 150px); }
+.mission .b-seat { width: clamp(130px, 18vw, 190px); font-size: clamp(64px, 9vw, 100px); }
+.go.ok { background: linear-gradient(#7ee08a, #3fb950); box-shadow: 0 8px 0 #2a8a3a, 0 14px 24px rgba(63, 185, 80, .3); }
+.go.ok:active { box-shadow: 0 2px 0 #2a8a3a; }
+.go.hold { position: relative; overflow: hidden; --v: 0; }
+.go.hold::after { content: ''; position: absolute; inset: 0; background: rgba(255, 255, 255, .45); transform: scaleX(var(--v)); transform-origin: right; }
