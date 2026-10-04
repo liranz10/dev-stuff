@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>כפר האותיות</title>
+<meta name="description" content="משחק לימוד אותיות ומילים בעברית לגן חובה, עם תומכי זיכרון משובצים">
+<meta name="theme-color" content="#9fdcff">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="כפר האותיות">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/favicon-32.png" sizes="32x32">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rubik:wght@700;800&family=Varela+Round&display=swap">
+<!--STYLE--><link rel="stylesheet" href="src/style.css"><!--/STYLE-->
+</head>
+<body>
+<div class="world" id="world" aria-hidden="true"></div>
+<div id="app">
+  <header class="topbar" id="topbar"></header>
+  <main id="stage"></main>
+</div>
+<!--SCRIPTS-->
+<script src="src/letters.js"></script>
+<script src="src/art.js"></script>
+<script src="src/engine.js"></script>
+<script src="src/audio.js"></script>
+<script src="src/app.js"></script>
+<!--/SCRIPTS-->
+<script>
+  // עבודה בלי אינטרנט (רק כשהדף רץ מאתר אמיתי, לא בתוך מסגרת)
+  if ('serviceWorker' in navigator && location.protocol === 'https:' && window.top === window.self) {
+    window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+  }
+</script>
+</body>
+</html>

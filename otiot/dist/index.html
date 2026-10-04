@@ -1,0 +1,1955 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>כפר האותיות</title>
+<meta name="description" content="משחק לימוד אותיות ומילים בעברית לגן חובה, עם תומכי זיכרון משובצים">
+<meta name="theme-color" content="#9fdcff">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="כפר האותיות">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/favicon-32.png" sizes="32x32">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rubik:wght@700;800&family=Varela+Round&display=swap">
+<style>
+/* כפר האותיות – עולם אחד מואר (שמיים, גבעות, בתים), בכוונה בלי מצב כהה: זה משחק ילדים עם תמונה קבועה */
+:root {
+  --sky-top: #9fdcff;
+  --sky-bot: #fff4dc;
+  --hill: #8fd86f;
+  --hill-dark: #6cc257;
+  --ink: #3b2a6b;        /* צבע האותיות */
+  --ink-soft: #6a5a96;
+  --coral: #ff7a59;      /* פעולה ראשית */
+  --coral-dark: #e3593a;
+  --sun: #ffc83d;
+  --teal: #2bb3a3;
+  --teal-dark: #1e9285;
+  --card: #ffffff;
+  --card-edge: #e4dcf5;
+  --good: #47c26b;
+  --font-ui: 'Varela Round', 'Rubik', 'Arial Hebrew', Arial, sans-serif;
+  --font-letter: 'Rubik', 'Arial Hebrew', Arial, sans-serif;
+  color-scheme: light;
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { height: 100%; }
+body {
+  margin: 0; overflow: hidden; direction: rtl;
+  font-family: var(--font-ui); color: var(--ink);
+  background: linear-gradient(180deg, var(--sky-top) 0%, #c9ecff 45%, var(--sky-bot) 100%);
+  -webkit-user-select: none; user-select: none; touch-action: manipulation;
+}
+button { font-family: inherit; color: inherit; border: 0; background: none; cursor: pointer; }
+button:focus-visible, input:focus-visible { outline: 4px solid var(--sun); outline-offset: 3px; }
+
+/* ---------- רקע ---------- */
+.world { position: fixed; inset: 0; pointer-events: none; z-index: 0; }
+.world .hills { position: absolute; bottom: 0; left: 0; width: 100%; height: 26vh; }
+.cloud { position: absolute; background: #fff; border-radius: 999px; opacity: .85; animation: drift 60s linear infinite; }
+.cloud::before, .cloud::after { content: ''; position: absolute; background: #fff; border-radius: 50%; }
+.cloud::before { width: 55%; height: 160%; top: -70%; right: 15%; }
+.cloud::after { width: 40%; height: 120%; top: -45%; left: 12%; }
+@keyframes drift { from { transform: translateX(-30vw); } to { transform: translateX(130vw); } }
+.sun-bg { position: absolute; top: 4vh; left: 5vw; width: 13vmin; height: 13vmin; border-radius: 50%; background: radial-gradient(circle, #ffe680 40%, #ffd23d 70%); box-shadow: 0 0 40px 12px rgba(255, 214, 80, .45); }
+
+/* ---------- מבנה ---------- */
+#app { position: relative; z-index: 1; height: 100%; display: flex; flex-direction: column; }
+.topbar { display: flex; align-items: center; gap: 10px; padding: calc(env(safe-area-inset-top, 0px) + 10px) 16px 6px; min-height: 64px; }
+.topbar .grow { flex: 1; }
+.icon-btn { width: 56px; height: 56px; border-radius: 18px; background: rgba(255, 255, 255, .85); box-shadow: 0 4px 0 var(--card-edge); font-size: 28px; display: grid; place-items: center; }
+.icon-btn:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--card-edge); }
+.icon-btn.small { width: 44px; height: 44px; font-size: 20px; border-radius: 14px; opacity: .75; }
+.progress { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; }
+.progress i { width: 14px; height: 14px; border-radius: 50%; background: rgba(255, 255, 255, .8); box-shadow: inset 0 0 0 2px var(--card-edge); transition: background .3s, transform .3s; }
+.progress i.done { background: var(--sun); box-shadow: inset 0 0 0 2px #e8a514; }
+.progress i.now { transform: scale(1.35); background: #fff; box-shadow: inset 0 0 0 3px var(--coral); }
+#stage { flex: 1; min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 8px 16px calc(env(safe-area-inset-bottom, 0px) + 16px); gap: 14px; overflow-y: auto; }
+.enter { animation: enter .45s cubic-bezier(.2, 1.4, .4, 1) both; }
+@keyframes enter { from { opacity: 0; transform: translateY(24px) scale(.97); } }
+
+/* ---------- טיפוגרפיה ---------- */
+h1.logo { font-family: var(--font-letter); font-weight: 800; font-size: clamp(40px, 9vmin, 84px); margin: 0; color: var(--ink); letter-spacing: -1px; text-shadow: 0 4px 0 #fff, 0 7px 0 rgba(59, 42, 107, .15); text-align: center; text-wrap: balance; }
+.logo .lt { display: inline-block; animation: bob 3s ease-in-out infinite; }
+.logo .lt:nth-child(2n) { animation-delay: -.6s; color: var(--coral); }
+.logo .lt:nth-child(3n) { animation-delay: -1.2s; color: var(--teal); }
+@keyframes bob { 50% { transform: translateY(-6px) rotate(-3deg); } }
+.say { font-size: clamp(22px, 4.2vmin, 34px); text-align: center; margin: 0; text-wrap: balance; max-width: 30ch; line-height: 1.35; }
+.say.big { font-size: clamp(28px, 5.6vmin, 46px); font-weight: 700; }
+.note { font-size: 16px; color: var(--ink-soft); text-align: center; max-width: 46ch; line-height: 1.5; }
+
+/* ---------- כפתורים ---------- */
+.btn { font-size: clamp(22px, 4vmin, 32px); padding: 16px 34px; border-radius: 26px; background: var(--coral); color: #fff; box-shadow: 0 7px 0 var(--coral-dark); font-weight: 700; display: inline-flex; align-items: center; gap: 12px; transition: transform .08s; }
+.btn:active { transform: translateY(5px); box-shadow: 0 2px 0 var(--coral-dark); }
+.btn.teal { background: var(--teal); box-shadow: 0 7px 0 var(--teal-dark); }
+.btn.white { background: #fff; color: var(--ink); box-shadow: 0 7px 0 var(--card-edge); }
+.btn.huge { font-size: clamp(30px, 6vmin, 48px); padding: 22px 52px; border-radius: 34px; }
+.btn.pulse { animation: pulse 1.8s ease-in-out infinite; }
+@keyframes pulse { 50% { transform: scale(1.06); } }
+.row { display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; align-items: center; }
+.next-btn { margin-top: 6px; }
+
+/* ---------- ינשופה ---------- */
+.owl-wrap { display: flex; align-items: center; gap: 12px; }
+.owl { width: clamp(80px, 15vmin, 130px); height: auto; filter: drop-shadow(0 6px 0 rgba(59, 42, 107, .12)); }
+.owl.happy { animation: owlbob 2.4s ease-in-out infinite; }
+.owl.cheer { animation: owljump .6s ease 2; }
+@keyframes owlbob { 50% { transform: translateY(-5px); } }
+@keyframes owljump { 40% { transform: translateY(-22px) rotate(-6deg); } }
+.bubble { background: #fff; border-radius: 26px; padding: 14px 22px; box-shadow: 0 5px 0 var(--card-edge); position: relative; max-width: min(560px, 70vw); }
+.bubble::after { content: ''; position: absolute; right: -19px; top: 50%; margin-top: -11px; border: 11px solid transparent; border-left-color: #fff; }
+
+/* ---------- פרופילים ---------- */
+.players { display: flex; gap: 22px; flex-wrap: wrap; justify-content: center; }
+.player { width: clamp(150px, 26vmin, 220px); padding: 20px 12px 16px; border-radius: 32px; background: #fff; box-shadow: 0 8px 0 var(--card-edge); display: flex; flex-direction: column; align-items: center; gap: 6px; transition: transform .1s; }
+.player:active { transform: translateY(5px); box-shadow: 0 3px 0 var(--card-edge); }
+.player .av { font-size: clamp(64px, 12vmin, 104px); line-height: 1; }
+.player .nm { font-size: clamp(26px, 4.6vmin, 38px); font-weight: 700; }
+.player.new { background: rgba(255, 255, 255, .6); border: 3px dashed var(--card-edge); box-shadow: none; }
+.avatars { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+.avatars button { font-size: clamp(48px, 10vmin, 80px); width: clamp(76px, 15vmin, 120px); aspect-ratio: 1; border-radius: 28px; background: #fff; box-shadow: 0 6px 0 var(--card-edge); }
+.avatars button.sel { box-shadow: 0 0 0 5px var(--coral), 0 6px 0 var(--card-edge); transform: scale(1.06); }
+.name-input { font-family: inherit; font-size: 34px; padding: 12px 22px; border-radius: 22px; border: 3px solid var(--card-edge); text-align: center; width: min(360px, 80vw); color: var(--ink); background: #fff; }
+
+/* ---------- כרטיסי אותיות ---------- */
+.cards { display: flex; gap: clamp(12px, 3vmin, 28px); flex-wrap: wrap; justify-content: center; }
+.card { width: clamp(130px, 25vmin, 210px); aspect-ratio: 5 / 6; border-radius: 30px; background: var(--card); box-shadow: 0 8px 0 var(--card-edge); display: grid; place-items: center; padding: 8px; transition: transform .15s; position: relative; }
+.cards.n4 .card { width: clamp(120px, 21vmin, 190px); }
+.card:active { transform: translateY(5px); box-shadow: 0 3px 0 var(--card-edge); }
+.card svg { width: 100%; height: 100%; }
+.card.good { box-shadow: 0 0 0 6px var(--good), 0 8px 0 var(--card-edge); animation: hop .5s ease; }
+.card.bad { animation: shake .45s ease; }
+.card.hint { box-shadow: 0 0 0 6px var(--sun), 0 8px 0 var(--card-edge); animation: pulse 1s ease-in-out infinite; }
+.card.dim { opacity: .35; }
+@keyframes hop { 40% { transform: translateY(-18px) scale(1.06); } }
+@keyframes shake { 20%, 60% { transform: translateX(-9px) rotate(-2deg); } 40%, 80% { transform: translateX(9px) rotate(2deg); } }
+.glyph-font { font-family: var(--font-letter); font-weight: 700; font-size: clamp(90px, 18vmin, 160px); line-height: 1; color: var(--ink); }
+.glyph-font.small { font-size: 1em; }
+.deco { transition: opacity 1.2s ease; }
+.morph .deco { opacity: 0 !important; }
+
+/* ---------- שיעור ---------- */
+.hero { width: clamp(220px, 46vmin, 400px); aspect-ratio: 1; background: #fff; border-radius: 40px; box-shadow: 0 10px 0 var(--card-edge); display: grid; place-items: center; padding: 14px; position: relative; }
+.hero svg { width: 100%; height: 100%; }
+.hero.pop { animation: heroPop .8s cubic-bezier(.2, 1.6, .4, 1) both; }
+@keyframes heroPop { from { transform: scale(.3) rotate(-12deg); opacity: 0; } }
+.pair-hero { display: flex; gap: 22px; align-items: center; flex-wrap: wrap; justify-content: center; }
+.pair-hero .hero { width: clamp(180px, 36vmin, 320px); }
+.font-twin { width: clamp(150px, 26vmin, 230px); aspect-ratio: 1; display: grid; place-items: center; background: #fff; border-radius: 36px; box-shadow: 0 8px 0 var(--card-edge); transition: opacity .8s, transform .8s; }
+.font-twin.hidden-twin { opacity: 0; transform: scale(.6); }
+.move-box { display: flex; gap: 24px; align-items: center; flex-wrap: wrap; justify-content: center; }
+.move-box .mouth { width: clamp(150px, 28vmin, 240px); background: #fff; border-radius: 30px; box-shadow: 0 8px 0 var(--card-edge); padding: 10px; }
+.move-emoji { font-size: clamp(80px, 16vmin, 140px); animation: wiggle 1.4s ease-in-out infinite; }
+@keyframes wiggle { 25% { transform: rotate(-10deg); } 75% { transform: rotate(10deg); } }
+.parent-tip { font-size: 15px; color: var(--ink-soft); background: rgba(255, 255, 255, .7); border-radius: 14px; padding: 8px 14px; max-width: 52ch; text-align: center; }
+.parent-tip b { color: var(--ink); }
+
+/* כתיבה */
+.write-area { display: flex; gap: 18px; align-items: center; flex-wrap: wrap; justify-content: center; }
+.write-model { width: clamp(110px, 20vmin, 170px); aspect-ratio: 1; background: #fff; border-radius: 26px; box-shadow: 0 6px 0 var(--card-edge); padding: 6px; }
+.write-model svg { width: 100%; height: 100%; }
+.trace-stroke { stroke-dasharray: 100; stroke-dashoffset: 100; animation: draw 1s ease forwards; }
+@keyframes draw { to { stroke-dashoffset: 0; } }
+canvas.pad { width: clamp(240px, 52vmin, 420px); aspect-ratio: 1; background: #fffdf6; border-radius: 30px; box-shadow: 0 8px 0 var(--card-edge), inset 0 0 0 3px #f1e9d6; touch-action: none; background-image: linear-gradient(transparent 31%, #f1e3c4 31%, #f1e3c4 32%, transparent 32%, transparent 82%, #f1e3c4 82%, #f1e3c4 83%, transparent 83%); }
+
+/* חיפוש */
+.hunt { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.hunt button { width: clamp(70px, 14vmin, 120px); aspect-ratio: 1; border-radius: 22px; background: #fff; box-shadow: 0 6px 0 var(--card-edge); font-family: var(--font-letter); font-weight: 700; font-size: clamp(42px, 8.5vmin, 76px); color: var(--ink); transition: transform .15s; }
+.hunt button.found { background: #e2f8e6; box-shadow: 0 0 0 5px var(--good); animation: hop .5s; }
+.hunt button.bad { animation: shake .45s; }
+
+/* ---------- עפיפונים ---------- */
+.sky-field { display: flex; gap: clamp(16px, 5vmin, 56px); justify-content: center; align-items: flex-end; min-height: 46vh; }
+.kite { position: relative; width: clamp(110px, 21vmin, 180px); transition: transform 1.2s cubic-bezier(.5, -0.3, .7, 1), opacity 1.2s; animation: sway 3s ease-in-out infinite; }
+.kite:nth-child(2) { animation-delay: -1s; }
+.kite:nth-child(3) { animation-delay: -2s; }
+.kite .kite-svg { width: 100%; display: block; }
+.kite .k-letter { position: absolute; top: 15%; left: 0; right: 0; text-align: center; font-family: var(--font-letter); font-weight: 800; font-size: clamp(44px, 9vmin, 80px); color: #fff; text-shadow: 0 3px 0 rgba(59, 42, 107, .35); line-height: 1.2; }
+.kite .k-letter.emoji { font-size: clamp(40px, 8vmin, 70px); text-shadow: none; top: 19%; }
+.kite.fly { transform: translateY(-90vh) rotate(-25deg) scale(.7); opacity: 0; }
+@keyframes sway { 50% { transform: rotate(4deg) translateY(-6px); } }
+
+/* ---------- בלונים ---------- */
+.balloon-field { position: relative; width: min(900px, 100%); flex: 1; min-height: 50vh; overflow: hidden; }
+.balloon { position: absolute; bottom: -150px; width: clamp(80px, 14vmin, 120px); animation: rise linear forwards; }
+.balloon .balloon-svg { width: 100%; display: block; }
+.balloon .b-letter { position: absolute; top: 14%; left: 0; right: 0; text-align: center; font-family: var(--font-letter); font-weight: 800; font-size: clamp(36px, 7vmin, 58px); color: #fff; text-shadow: 0 2px 0 rgba(59, 42, 107, .35); }
+.balloon.popped { animation: popIt .3s ease forwards !important; }
+.balloon.wobble .balloon-svg { animation: shake .4s; }
+@keyframes rise { to { transform: translateY(var(--rise, -700px)); } }
+@keyframes popIt { to { transform: scale(1.6); opacity: 0; } }
+.counter { display: flex; gap: 8px; font-size: 38px; }
+.counter span { opacity: .25; transition: opacity .3s, transform .3s; }
+.counter span.on { opacity: 1; transform: scale(1.2); }
+
+/* ---------- מילים ---------- */
+.pic { font-size: clamp(90px, 18vmin, 150px); line-height: 1; filter: drop-shadow(0 6px 0 rgba(59, 42, 107, .12)); }
+.pic-btn { background: #fff; border-radius: 30px; padding: 10px 20px; box-shadow: 0 8px 0 var(--card-edge); }
+.slots { display: flex; gap: 12px; direction: rtl; }
+.slot { width: clamp(70px, 13vmin, 110px); aspect-ratio: 1; border-radius: 22px; background: rgba(255, 255, 255, .6); border: 4px dashed var(--card-edge); display: grid; place-items: center; font-family: var(--font-letter); font-weight: 700; font-size: clamp(46px, 9vmin, 80px); color: var(--ink); }
+.slot.filled { background: #fff; border: 4px solid var(--good); animation: hop .4s; }
+.slot.next { border-color: var(--coral); }
+.tiles { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+.tile { width: clamp(70px, 13vmin, 110px); aspect-ratio: 1; border-radius: 22px; background: #fff; box-shadow: 0 7px 0 var(--card-edge); font-family: var(--font-letter); font-weight: 700; font-size: clamp(46px, 9vmin, 80px); color: var(--ink); }
+.tile.used { visibility: hidden; }
+.tile.bad { animation: shake .45s; }
+.word-big { font-family: var(--font-letter); font-weight: 700; font-size: clamp(70px, 15vmin, 140px); letter-spacing: 6px; background: #fff; padding: 6px 36px; border-radius: 30px; box-shadow: 0 8px 0 var(--card-edge); display: flex; direction: rtl; }
+.word-big span { cursor: pointer; border-radius: 12px; padding: 0 2px; }
+.word-big span.lit { background: #fff1b8; }
+.pics { display: flex; gap: 20px; flex-wrap: wrap; justify-content: center; }
+.pics button { font-size: clamp(70px, 14vmin, 120px); background: #fff; border-radius: 30px; width: clamp(120px, 22vmin, 190px); aspect-ratio: 1; box-shadow: 0 8px 0 var(--card-edge); }
+.pics button.good { box-shadow: 0 0 0 6px var(--good), 0 8px 0 var(--card-edge); animation: hop .5s; }
+.pics button.bad { animation: shake .45s; }
+.pics button.hint { box-shadow: 0 0 0 6px var(--sun), 0 8px 0 var(--card-edge); }
+
+/* ---------- כפר ---------- */
+.village { display: grid; grid-template-columns: repeat(auto-fill, minmax(clamp(96px, 17vmin, 150px), 1fr)); gap: 14px; width: min(980px, 100%); padding-bottom: 20px; }
+.house { position: relative; background: #fff; border-radius: 22px 22px 18px 18px; box-shadow: 0 6px 0 var(--card-edge); padding: 14px 6px 6px; aspect-ratio: 5 / 6; display: grid; place-items: center; }
+.house::before { content: ''; position: absolute; top: -16px; left: 10%; right: 10%; height: 26px; background: var(--h, var(--coral)); clip-path: polygon(50% 0, 100% 100%, 0 100%); }
+.house svg { width: 100%; height: 100%; }
+.house.empty { background: rgba(255, 255, 255, .45); box-shadow: none; border: 3px dashed rgba(255, 255, 255, .9); font-size: 34px; color: rgba(59, 42, 107, .35); }
+.house.empty::before { opacity: .3; }
+.house .fin { position: absolute; bottom: 6px; left: 8px; font-family: var(--font-letter); font-weight: 700; font-size: 22px; background: #fff1b8; border-radius: 10px; padding: 0 6px; }
+
+/* ---------- סיום ---------- */
+.confetti { position: fixed; inset: 0; pointer-events: none; z-index: 5; overflow: hidden; }
+.confetti i { position: absolute; top: -20px; width: 12px; height: 18px; border-radius: 3px; animation: fall linear forwards; }
+@keyframes fall { to { transform: translateY(110vh) rotate(720deg); } }
+.rainbow { display: flex; gap: 4px; }
+.rainbow i { width: clamp(16px, 3.5vmin, 30px); height: clamp(40px, 8vmin, 70px); border-radius: 12px; background: rgba(255, 255, 255, .6); transition: background .4s; }
+.turn { display: flex; align-items: center; gap: 10px; font-size: clamp(24px, 4.4vmin, 36px); font-weight: 700; background: #fff; padding: 8px 22px; border-radius: 999px; box-shadow: 0 5px 0 var(--card-edge); }
+.turn .av { font-size: 1.5em; }
+
+/* ---------- אזור הורים ---------- */
+.parent { width: min(900px, 100%); background: #fff; border-radius: 28px; box-shadow: 0 8px 0 var(--card-edge); padding: 20px clamp(16px, 4vw, 34px); align-self: stretch; margin-inline: auto; -webkit-user-select: text; user-select: text; }
+.parent h2 { margin: 0 0 6px; font-size: 26px; }
+.parent h3 { margin: 22px 0 8px; font-size: 19px; color: var(--ink-soft); letter-spacing: .02em; }
+.parent p, .parent li { font-size: 16px; line-height: 1.6; }
+.ptabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+.ptabs button { font-size: 18px; padding: 8px 16px; border-radius: 14px; background: #f3effb; }
+.ptabs button.on { background: var(--ink); color: #fff; }
+.stat-row { display: flex; gap: 12px; flex-wrap: wrap; }
+.stat { background: #f7f4fd; border-radius: 16px; padding: 10px 16px; min-width: 120px; }
+.stat b { display: block; font-size: 22px; font-variant-numeric: tabular-nums; }
+.stat span { font-size: 14px; color: var(--ink-soft); }
+.lgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); gap: 8px; }
+.lcell { border-radius: 14px; padding: 6px 4px; text-align: center; background: #f0eef5; }
+.lcell .ch { font-family: var(--font-letter); font-weight: 700; font-size: 30px; display: block; line-height: 1.2; }
+.lcell small { font-size: 12px; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+.lcell.s1 { background: #ffe1dc; } .lcell.s2 { background: #fff0c7; } .lcell.s3 { background: #dff5d8; } .lcell.s4 { background: #b9ebb0; }
+.legend { display: flex; gap: 12px; flex-wrap: wrap; font-size: 13px; color: var(--ink-soft); margin-top: 8px; }
+.legend i { display: inline-block; width: 12px; height: 12px; border-radius: 4px; vertical-align: middle; margin-left: 4px; }
+.prow { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin: 8px 0; }
+.pbtn { font-size: 16px; padding: 9px 16px; border-radius: 12px; background: #f3effb; }
+.pbtn.on { background: var(--teal); color: #fff; }
+.pbtn.danger { background: #ffe1dc; color: #a2321c; }
+.parent textarea { width: 100%; min-height: 70px; font-family: monospace; font-size: 12px; border-radius: 12px; border: 2px solid var(--card-edge); padding: 8px; direction: ltr; }
+.gate-btn { width: 180px; height: 180px; border-radius: 50%; background: #fff; box-shadow: 0 8px 0 var(--card-edge); font-size: 60px; position: relative; overflow: hidden; }
+.gate-btn .fill { position: absolute; bottom: 0; left: 0; right: 0; height: 0; background: rgba(43, 179, 163, .3); }
+.gate-btn.holding .fill { height: 100%; transition: height 3s linear; }
+
+@media (max-height: 560px) {
+  .owl { width: 70px; }
+  .hero { width: min(40vh, 300px); }
+  #stage { gap: 8px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+}
+</style>
+</head>
+<body>
+<div class="world" id="world" aria-hidden="true"></div>
+<div id="app">
+  <header class="topbar" id="topbar"></header>
+  <main id="stage"></main>
+</div>
+<script>
+/* כפר האותיות – נתוני אותיות, תומכי זיכרון משובצים ומילים.
+ * כל אות מצוירת כקווים עבים בתיבה של 100x100 (גובה הגוף 20–84, עולה עד 4, יורד עד 104).
+ * תומך הזיכרון (deco) מצויר סביב קו האות עצמו, כך שהאות היא חלק מהחפץ (אהרי; שמידמן ואהרי 2010).
+ */
+(function () {
+  const K = (window.K = window.K || {});
+
+  // קו עבה "צל" מתחת לקו האות – הופך את האות עצמה לגוף החפץ
+  const fat = (d, color, w) =>
+    `<path d="${d}" fill="none" stroke="${color}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round"/>`;
+  const circ = (x, y, r, f, extra = '') => `<circle cx="${x}" cy="${y}" r="${r}" fill="${f}" ${extra}/>`;
+  const ell = (x, y, rx, ry, f, rot = 0, extra = '') =>
+    `<ellipse cx="${x}" cy="${y}" rx="${rx}" ry="${ry}" fill="${f}" transform="rotate(${rot} ${x} ${y})" ${extra}/>`;
+  const line = (x1, y1, x2, y2, c, w) =>
+    `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${c}" stroke-width="${w}" stroke-linecap="round"/>`;
+  const grass = (y = 92) => ell(50, y, 50, 7, '#9be07a');
+
+  const L = {
+    'ל': {
+      name: 'לָמֶד', sound: 'לָה', word: 'לִוְיָתָן', plain: 'לווייתן', emoji: '🐋',
+      d: 'M26 4 V36 H70 Q80 36 80 46 V52 Q80 72 50 86',
+      deco: () =>
+        `<path d="M26 34 H70 Q88 36 85 56 Q80 80 52 88 Q28 82 24 60 Z" fill="#8fd3f7"/>` +
+        ell(56, 68, 20, 9, '#d8f1ff') +
+        circ(40, 48, 3.6, '#2a2350') + circ(41.2, 46.8, 1.2, '#fff') +
+        `<path d="M36 58 Q44 64 52 58" fill="none" stroke="#2a2350" stroke-width="2.4" stroke-linecap="round"/>` +
+        circ(34, 56, 3, '#ffb3c7') +
+        ell(42, 94, 9, 4.5, '#5fb8e8', -25) + ell(58, 94, 9, 4.5, '#5fb8e8', 25) +
+        circ(14, 2, 4, '#7cc8f0') + circ(38, 2, 4, '#7cc8f0') + circ(8, 12, 3, '#a8dcf7') +
+        circ(44, 12, 3, '#a8dcf7') + circ(20, -6, 3, '#a8dcf7') + circ(32, -7, 3, '#a8dcf7'),
+      story: 'זה לווייתן לבבי. הגוף שלו הוא האות לָמֶד, והמזרקה שלו עולה למעלה, למעלה!',
+      move: 'יד אחת עולה גבוה למעלה כמו המזרקה של הלווייתן',
+      mouth: 'tongue',
+    },
+    'י': {
+      name: 'יוֹד', sound: 'יָה', word: 'יָם', plain: 'ים', emoji: '🌊',
+      d: 'M42 24 H50 Q58 24 58 34 V50',
+      deco: () =>
+        `<path d="M-6 62 Q8 52 22 62 T50 62 T78 62 T106 62 V108 H-6 Z" fill="#5bbcf0"/>` +
+        `<path d="M-6 76 Q8 68 22 76 T50 76 T78 76 T106 76 V108 H-6 Z" fill="#3a9fdc"/>` +
+        circ(64, 54, 4, '#fff') + circ(54, 58, 3, '#fff') + circ(70, 46, 2.5, '#fff') +
+        circ(38, 18, 3, '#bfe8ff') + circ(66, 16, 2.5, '#bfe8ff') +
+        ell(24, 92, 9, 5, '#ffb03b') + `<path d="M15 92 L8 87 L8 97 Z" fill="#ffb03b"/>` + circ(28, 91, 1.4, '#2a2350') +
+        `<path d="M76 58 H96 L92 64 H80 Z" fill="#ff7a59"/>` + line(86, 58, 86, 42, '#7a5230', 2) +
+        `<path d="M87 43 L87 56 L96 56 Z" fill="#fff"/>`,
+      story: 'יוֹד קטנה, כמו גל קטן בים. יָה, יָה, הגל קופץ!',
+      move: 'אצבע קטנה עולה ומתכופפת, כמו גל קטן',
+      mouth: 'smile',
+    },
+    'ע': {
+      name: 'עַיִן', sound: 'עָה', word: 'עֵץ', plain: 'עץ', emoji: '🌳',
+      d: 'M26 20 Q34 50 64 68 M78 20 V60 Q78 82 54 82 H20',
+      deco: () =>
+        grass(90) +
+        fat('M26 20 Q34 50 64 68 M78 20 V60 Q78 82 54 82 H20', '#a0663a', 20) +
+        circ(24, 12, 13, '#5cc46a') + circ(14, 22, 9, '#4cb35c') + circ(36, 6, 9, '#6fd27c') +
+        circ(78, 10, 13, '#5cc46a') + circ(90, 20, 9, '#4cb35c') + circ(66, 4, 9, '#6fd27c') +
+        circ(18, 10, 3, '#ff5c5c') + circ(86, 14, 3, '#ff5c5c') + circ(72, 2, 3, '#ff5c5c'),
+      story: 'העץ מרים שני ענפים אל השמיים, ועל הענפים גדלים עלים ירוקים. עָה, עָה, עֵץ!',
+      move: 'שתי ידיים למעלה ופתוחות, כמו ענפים של עץ',
+      mouth: 'open',
+    },
+    'ו': {
+      name: 'וָו', sound: 'וָה', word: 'וֶרֶד', plain: 'ורד', emoji: '🌹',
+      d: 'M42 22 H50 Q58 22 58 32 V84',
+      deco: () =>
+        grass(92) +
+        fat('M58 34 V86', '#5cb85c', 18) +
+        ell(72, 62, 11, 5, '#5cb85c', -30) + ell(44, 70, 11, 5, '#5cb85c', 30) +
+        circ(50, 18, 15, '#ff4f7f') + circ(40, 14, 8, '#ff7aa0') + circ(60, 13, 8, '#ff7aa0') +
+        circ(50, 8, 7, '#ff98b6'),
+      story: 'ורד ורוד עומד ישר על גבעול ארוך. וָה, וָה, וֶרֶד!',
+      move: 'עומדים ישר כמו גבעול, והידיים פורחות מעל הראש',
+      mouth: 'teeth',
+    },
+    'מ': {
+      name: 'מֵם', sound: 'מָה', word: 'מֶלֶךְ', plain: 'מלך', emoji: '🤴',
+      d: 'M18 20 L28 32 V84 M28 32 H66 Q78 32 78 44 V84 H46',
+      deco: () =>
+        `<polygon points="30,30 30,6 42,18 53,2 64,18 76,6 76,30" fill="#ffc83d" stroke="#e8a514" stroke-width="2" stroke-linejoin="round"/>` +
+        circ(53, 22, 3.5, '#ff4f7f') + circ(40, 24, 2.6, '#4fb3e8') + circ(66, 24, 2.6, '#5cc46a') +
+        circ(53, 60, 19, '#ffd9b3') +
+        circ(46, 56, 2.8, '#2a2350') + circ(60, 56, 2.8, '#2a2350') +
+        circ(42, 64, 3, '#ffb3c7') + circ(64, 64, 3, '#ffb3c7') +
+        `<path d="M46 66 Q53 73 60 66" fill="none" stroke="#2a2350" stroke-width="2.4" stroke-linecap="round"/>`,
+      story: 'מלך מחייך עם כתר מבריק על הראש. מָה, מָה, מֶלֶךְ!',
+      move: 'שתי ידיים על הראש, כמו כתר',
+      mouth: 'lips',
+    },
+    'ב': {
+      name: 'בֵּית', sound: 'בָּה', word: 'בַּיִת', plain: 'בית', emoji: '🏠',
+      d: 'M24 22 H64 Q76 22 76 34 V78 M20 78 H88',
+      deco: () =>
+        grass(86) +
+        `<rect x="24" y="22" width="52" height="56" fill="#fff1c9"/>` +
+        `<rect x="64" y="0" width="8" height="16" fill="#c0603e"/>` +
+        `<polygon points="12,26 50,-2 88,26" fill="#ff7a6b" stroke="#e85a4a" stroke-width="2" stroke-linejoin="round"/>` +
+        `<rect x="44" y="50" width="16" height="28" rx="3" fill="#b5703f"/>` + circ(56, 65, 1.6, '#ffd36b') +
+        `<rect x="30" y="34" width="12" height="12" rx="2" fill="#9ad8ff"/>` + line(36, 34, 36, 46, '#fff', 1.6) + line(30, 40, 42, 40, '#fff', 1.6) +
+        circ(90, 72, 3, '#ff7aa0') + circ(94, 76, 2.4, '#ffd36b'),
+      story: 'זה בית. יש לו גג, דלת, ומדרגה קטנה שבולטת למטה בצד. בָּה, בָּה, בַּיִת!',
+      move: 'ידיים מעל הראש, כמו גג של בית',
+      mouth: 'lips',
+    },
+    'ה': {
+      name: 'הֵא', sound: 'הָה', word: 'הֶלִיקוֹפְּטֶר', plain: 'הליקופטר', emoji: '🚁',
+      d: 'M18 24 H68 Q80 24 80 36 V84 M28 46 V84',
+      deco: () =>
+        `<rect x="2" y="8" width="96" height="5" rx="2.5" fill="#6b6f80"/>` +
+        `<rect x="46" y="10" width="8" height="14" fill="#6b6f80"/>` +
+        circ(55, 60, 19, '#ffcf4a') +
+        `<path d="M41 56 A14 14 0 0 1 69 56 Z" fill="#9ad8ff"/>` +
+        line(16, 96, 92, 96, '#6b6f80', 5) + line(28, 86, 28, 96, '#6b6f80', 3) + line(80, 86, 80, 96, '#6b6f80', 3) +
+        `<path d="M28 40 L28 32" stroke="#ff7a59" stroke-width="2.5" stroke-dasharray="2 3" stroke-linecap="round"/>`,
+      story: 'הליקופטר מסתובב: הָה, הָה! יש לו פתח קטן בצד, כדי שאפשר להיכנס.',
+      move: 'ידיים מסתובבות מעל הראש, כמו מדחף',
+      mouth: 'open',
+    },
+    'ס': {
+      name: 'סָמֶךְ', sound: 'סָה', word: 'סַל', plain: 'סל', emoji: '🧺',
+      d: 'M18 22 H62 Q80 22 80 40 V64 Q80 82 62 82 H40 Q22 82 22 64 V22',
+      deco: () =>
+        `<path d="M30 24 Q50 -16 72 24" fill="none" stroke="#b8782f" stroke-width="6" stroke-linecap="round"/>` +
+        circ(38, 18, 7, '#ff5c5c') + circ(52, 15, 7, '#7bd36b') + circ(65, 19, 7, '#ffb03b') +
+        `<path d="M18 22 H62 Q80 22 80 40 V64 Q80 82 62 82 H40 Q22 82 22 64 Z" fill="#e8b062"/>` +
+        line(24, 40, 78, 40, '#c48a3e', 2.5) + line(24, 54, 78, 54, '#c48a3e', 2.5) + line(26, 68, 76, 68, '#c48a3e', 2.5) +
+        line(40, 24, 40, 80, '#c48a3e', 2) + line(58, 24, 58, 80, '#c48a3e', 2),
+      story: 'סל עגול מלא בפירות טעימים. סָה, סָה, סַל!',
+      move: 'ידיים עושות עיגול גדול מול הבטן, כמו סל',
+      mouth: 'hiss',
+    },
+    'ר': {
+      name: 'רֵישׁ', sound: 'רָה', word: 'רֶגֶל', plain: 'רגל', emoji: '🦵',
+      d: 'M20 22 H60 Q80 22 80 42 V84',
+      deco: () =>
+        `<rect x="6" y="30" width="44" height="6" rx="3" fill="#b5703f"/>` + line(12, 36, 12, 92, '#b5703f', 4) + line(44, 36, 44, 92, '#b5703f', 4) +
+        fat('M20 22 H60 Q80 22 80 42 V62', '#4c7be0', 22) +
+        fat('M80 62 V80', '#ffffff', 18) + line(72, 68, 88, 68, '#ff7aa0', 3) + line(72, 74, 88, 74, '#ff7aa0', 3) +
+        ell(90, 88, 15, 7, '#ff5c8a') +
+        `<path d="M70 26 q4 -5 8 0 q4 5 -4 10 q-8 -5 -4 -10z" fill="#ffd36b"/>`,
+      story: 'רגל יושבת על כיסא, והברך שלה עגולה, עגולה. רָה, רָה, רֶגֶל!',
+      move: 'יושבים, מכופפים רגל ומלטפים את הברך העגולה',
+      mouth: 'roll',
+    },
+    'א': {
+      name: 'אָלֶף', sound: 'אָה', word: 'אֲוִירוֹן', plain: 'אווירון', emoji: '✈️',
+      d: 'M26 20 L76 84 M74 20 Q76 44 54 50 M44 56 Q28 60 28 84',
+      deco: () =>
+        ell(84, 12, 12, 6, '#ffffff', 0, 'stroke="#cfe6f7" stroke-width="1.5"') +
+        ell(12, 72, 10, 5, '#ffffff', 0, 'stroke="#cfe6f7" stroke-width="1.5"') +
+        fat('M74 20 Q76 44 54 50', '#9ad0f5', 18) + fat('M44 56 Q28 60 28 84', '#9ad0f5', 18) +
+        fat('M26 20 L76 84', '#eef3fa', 26) +
+        `<polygon points="14,8 30,6 30,28" fill="#ff6b6b"/>` +
+        circ(80, 89, 8, '#ff6b6b') +
+        circ(46, 33, 3, '#4f9fe0') + circ(54, 43, 3, '#4f9fe0') + circ(62, 53, 3, '#4f9fe0') + circ(70, 63, 3, '#4f9fe0'),
+      story: 'אווירון עף באוויר עם שתי כנפיים פתוחות. אָה, אָה, אֲוִירוֹן!',
+      move: 'ידיים פתוחות לצדדים כמו כנפיים, וטסים בחדר',
+      mouth: 'open',
+    },
+    'פ': {
+      name: 'פֵּא', sound: 'פָּה', word: 'פִּיל', plain: 'פיל', emoji: '🐘',
+      d: 'M40 50 H24 V22 H62 Q80 22 80 40 V64 Q80 82 62 82 H20',
+      deco: () =>
+        ell(88, 50, 14, 22, '#9aa6b2') + ell(88, 50, 8, 14, '#f3b8c8') +
+        `<path d="M24 22 H62 Q80 22 80 40 V64 Q80 82 62 82 H24 Z" fill="#bcc6d0"/>` +
+        fat('M40 50 H24 V22', '#8e9aa6', 16) +
+        circ(62, 40, 4, '#2a2350') + circ(63.4, 38.6, 1.3, '#fff') + circ(68, 56, 4, '#f3b8c8') +
+        `<path d="M36 72 Q40 90 54 92" fill="none" stroke="#fffaf0" stroke-width="5" stroke-linecap="round"/>`,
+      story: 'פיל גדול, והחדק שלו מסתלסל פנימה. פָּה, פָּה, פִּיל!',
+      move: 'יד אחת מתנדנדת מול האף, כמו חדק',
+      mouth: 'lips',
+    },
+    'ש': {
+      name: 'שִׁין', sound: 'שָׁה', word: 'שֶׁמֶשׁ', plain: 'שמש', emoji: '☀️',
+      d: 'M22 20 V62 Q22 82 42 82 H60 Q80 82 80 62 V20 M51 20 V66',
+      deco: () =>
+        fat('M22 20 V58 M80 20 V58 M51 20 V50', '#ffb03b', 20) +
+        circ(51, 64, 24, '#ffd84a') +
+        circ(38, 62, 2.8, '#7a4a10') + circ(64, 62, 2.8, '#7a4a10') +
+        circ(34, 70, 3, '#ff9f7a') + circ(68, 70, 3, '#ff9f7a') +
+        line(22, 4, 22, 10, '#ffb03b', 3) + line(51, 4, 51, 10, '#ffb03b', 3) + line(80, 4, 80, 10, '#ffb03b', 3) +
+        line(10, 8, 14, 13, '#ffb03b', 3) + line(92, 8, 88, 13, '#ffb03b', 3),
+      story: 'שמש זורחת עם שלוש קרניים למעלה. שָׁה, שָׁה, שֶׁמֶשׁ!',
+      move: 'שלוש אצבעות למעלה, כמו שלוש קרניים',
+      mouth: 'hiss',
+    },
+    'נ': {
+      name: 'נוּן', sound: 'נָה', word: 'נַעַל', plain: 'נעל', emoji: '👢',
+      d: 'M42 22 H54 Q64 22 64 32 V80 H30',
+      deco: () =>
+        fat('M42 22 H54 Q64 22 64 32 V80 H30', '#e0533d', 24) +
+        `<rect x="34" y="12" width="36" height="8" rx="4" fill="#ffd36b"/>` +
+        line(22, 92, 72, 92, '#5a3a2a', 7) + `<rect x="60" y="84" width="12" height="10" rx="2" fill="#5a3a2a"/>` +
+        line(50, 38, 56, 44, '#fff', 2.4) + line(56, 38, 50, 44, '#fff', 2.4) +
+        line(50, 52, 56, 58, '#fff', 2.4) + line(56, 52, 50, 58, '#fff', 2.4),
+      story: 'נעל עם שרוכים, והבוהן שלה מסתכלת שמאלה. נָה, נָה, נַעַל!',
+      move: 'דורכים חזק ברגל על הרצפה: נָה, נָה!',
+      mouth: 'tongue',
+    },
+    'ג': {
+      name: 'גִּימֶל', sound: 'גָּה', word: 'גֶּרֶב', plain: 'גרב', emoji: '🧦',
+      d: 'M38 20 H50 Q60 20 60 30 V80 M60 64 L38 84',
+      deco: () =>
+        fat('M50 20 Q60 20 60 30 V72 L40 84', '#ff8fb1', 28) +
+        `<rect x="40" y="6" width="34" height="14" rx="5" fill="#fff" stroke="#ff8fb1" stroke-width="2.5"/>` +
+        line(48, 40, 72, 40, '#fff', 4) + line(48, 52, 72, 52, '#fff', 4) +
+        circ(36, 86, 9, '#ff5c8a') + circ(66, 74, 7, '#ff5c8a'),
+      story: 'גרב צבעונית, ולמטה יש לה רגל קטנה שבורחת הצידה. גָּה, גָּה, גֶּרֶב!',
+      move: 'מרימים רגל ומנופפים בכף הרגל',
+      mouth: 'back',
+    },
+    'ט': {
+      name: 'טֵית', sound: 'טָה', word: 'טַוָּס', plain: 'טווס', emoji: '🦚',
+      d: 'M30 18 V66 Q30 82 46 82 H62 Q78 82 78 66 V42 Q78 26 62 26 Q52 26 50 38',
+      deco: () =>
+        [20, 50, 80, 110, 140].map((a, i) => {
+          const r = (a * Math.PI) / 180, x = 62 + Math.cos(r) * 30, y = 46 - Math.sin(r) * 30;
+          return ell(x, y, 8, 14, ['#3fbf9f', '#2f9fd8', '#7c5cff', '#2f9fd8', '#3fbf9f'][i], 90 - a) + circ(x, y, 3.5, '#ffc83d');
+        }).join('') +
+        ell(56, 62, 15, 17, '#2f7fd8') + ell(56, 66, 8, 10, '#5fa8ee') +
+        circ(30, 12, 8, '#2f7fd8') + circ(28, 10, 1.8, '#fff') + `<path d="M22 12 L15 14 L22 16 Z" fill="#ffb03b"/>` +
+        circ(26, 1, 2, '#3fbf9f') + circ(31, -1, 2, '#3fbf9f') + circ(36, 1, 2, '#3fbf9f') +
+        line(50, 84, 48, 94, '#ffb03b', 3) + line(62, 84, 64, 94, '#ffb03b', 3),
+      story: 'טווס מתהדר בזנב צבעוני ומסתובב. טָה, טָה, טַוָּס!',
+      move: 'ידיים מאחורי הגב נפתחות לצדדים, כמו מניפה של טווס',
+      mouth: 'tongue',
+    },
+    'ק': {
+      name: 'קוֹף', sound: 'קָה', word: 'קוֹף', plain: 'קוף', emoji: '🐒',
+      d: 'M22 22 H64 Q78 22 78 36 V84 M30 46 V104',
+      deco: () =>
+        line(-4, 8, 104, 6, '#8a5a2b', 6) + ell(10, 2, 9, 4, '#5cc46a', -20) + ell(92, 0, 9, 4, '#5cc46a', 20) +
+        circ(40, 52, 6, '#a86b3c') + circ(72, 52, 6, '#a86b3c') +
+        circ(56, 54, 16, '#a86b3c') + ell(56, 60, 10, 7, '#f1c99a') +
+        circ(51, 50, 2.6, '#2a2350') + circ(61, 50, 2.6, '#2a2350') +
+        `<path d="M52 63 Q56 66 60 63" fill="none" stroke="#2a2350" stroke-width="2" stroke-linecap="round"/>` +
+        fat('M30 50 V104', '#a86b3c', 12) +
+        `<path d="M30 104 Q30 114 40 112 Q46 110 42 104" fill="none" stroke="#a86b3c" stroke-width="6" stroke-linecap="round"/>`,
+      story: 'קוף שובב תלוי על ענף, והזנב הארוך שלו יורד למטה. קָה, קָה, קוֹף!',
+      move: 'מגרדים בראש כמו קוף וקופצים',
+      mouth: 'back',
+    },
+    'ד': {
+      name: 'דָּלֶת', sound: 'דָּה', word: 'דֶּגֶל', plain: 'דגל', emoji: '🚩',
+      d: 'M18 24 H84 M70 24 V84',
+      deco: () =>
+        grass(90) +
+        `<path d="M20 28 Q32 22 44 30 T66 30 V58 Q54 52 44 58 T20 56 Z" fill="#ffffff" stroke="#4f7fe0" stroke-width="2"/>` +
+        `<rect x="20" y="31" width="46" height="4" fill="#4f7fe0"/>` + `<rect x="20" y="49" width="46" height="4" fill="#4f7fe0" transform="skewY(-1)"/>` +
+        `<polygon points="43,36 47,44 39,44" fill="none" stroke="#4f7fe0" stroke-width="1.6"/>` +
+        `<polygon points="43,47 47,39 39,39" fill="none" stroke="#4f7fe0" stroke-width="1.6"/>` +
+        circ(70, 14, 5, '#ffc83d') + circ(86, 24, 7, '#ff7a59', 'opacity="0.55"'),
+      story: 'דגל מתנופף על עמוד. שימו לב: למעלה יש פינה חדה שבולטת החוצה. דָּה, דָּה, דֶּגֶל!',
+      move: 'יד אחת ישרה למעלה כמו עמוד, והיד השנייה מתנופפת',
+      mouth: 'tongue',
+    },
+    'ז': {
+      name: 'זַיִן', sound: 'זָה', word: 'זִקּוּקִים', plain: 'זיקוקים', emoji: '🎆',
+      d: 'M34 22 H70 M52 22 V84',
+      deco: () =>
+        Array.from({ length: 14 }, (_, i) => {
+          const a = (i / 14) * Math.PI * 2, c = ['#ff5c8a', '#ffb000', '#2fb8f0', '#4cc85a', '#a06bff'][i % 5];
+          return line(52 + Math.cos(a) * 24, 20 + Math.sin(a) * 22, 52 + Math.cos(a) * 38, 20 + Math.sin(a) * 34, c, 4);
+        }).join('') +
+        circ(12, 0, 2.5, '#ffb000') + circ(94, 46, 2.5, '#ff5c8a') + circ(92, -4, 2.5, '#2fb8f0') + circ(10, 44, 2.5, '#4cc85a') +
+        fat('M52 40 V84', '#ff7a59', 10),
+      story: 'זיקוקים זוהרים בשמיים: בום! זָה, זָה, זִקּוּקִים!',
+      move: 'קופצים למעלה ופותחים את הידיים: בום!',
+      mouth: 'hiss',
+    },
+    'צ': {
+      name: 'צָדִי', sound: 'צָה', word: 'צִפּוֹר', plain: 'ציפור', emoji: '🐦',
+      d: 'M24 20 L70 82 M18 82 H82 M76 20 Q76 46 56 54',
+      deco: () =>
+        fat('M10 82 H92', '#8a5a2b', 14) + ell(8, 76, 8, 4, '#5cc46a', -30) + ell(94, 76, 8, 4, '#5cc46a', 30) +
+        ell(18, 14, 10, 4, '#ffb03b', 40) + ell(14, 22, 10, 4, '#ff9f1a', 20) +
+        ell(48, 50, 26, 13, '#ffd84a', 53) + ell(48, 54, 12, 7, '#fff3b0', 53) +
+        circ(76, 18, 10, '#ffd84a') + circ(78, 15, 2.2, '#2a2350') +
+        `<path d="M85 16 L95 20 L85 23 Z" fill="#ff8a3d"/>`,
+      story: 'ציפור קטנה יושבת על ענף ומצייצת: צָה, צָה, צִפּוֹר!',
+      move: 'מנפנפים בידיים קטנות כמו כנפיים, ומצייצים',
+      mouth: 'hiss',
+    },
+    'ח': {
+      name: 'חֵית', sound: 'חָה', word: 'חֻפָּה', plain: 'חופה', emoji: '💒',
+      d: 'M24 84 V24 H68 Q80 24 80 36 V84',
+      deco: () =>
+        grass(90) +
+        `<path d="M14 16 H90 V32 Q84 40 77 32 Q70 40 63 32 Q56 40 49 32 Q42 40 35 32 Q28 40 21 32 Q17 38 14 32 Z" fill="#ffe0ef" stroke="#ff8fb1" stroke-width="2"/>` +
+        circ(24, 50, 4, '#ff7aa0') + circ(24, 66, 4, '#ffd36b') + circ(80, 56, 4, '#ffd36b') + circ(80, 72, 4, '#ff7aa0') +
+        `<path d="M52 4 q4 -5 8 0 q4 5 -4 10 q-8 -5 -4 -10z" fill="#ff5c8a"/>`,
+      story: 'חופה של חתונה. הגג שלה סגור מכל הצדדים. חָה, חָה, חֻפָּה!',
+      move: 'שתי ידיים למעלה נוגעות זו בזו, כמו גג סגור',
+      mouth: 'back',
+    },
+    'כ': {
+      name: 'כַּף', sound: 'כָּה', word: 'כָּרִישׁ', plain: 'כריש', emoji: '🦈',
+      d: 'M22 22 H60 Q80 22 80 42 V60 Q80 80 60 80 H22',
+      deco: () =>
+        `<polygon points="80,51 100,32 95,51 100,70" fill="#6f8ba3"/>` +
+        `<polygon points="42,24 58,0 64,24" fill="#6f8ba3"/>` +
+        `<path d="M22 22 H60 Q80 22 80 42 V60 Q80 80 60 80 H22 L48 51 Z" fill="#9db4c8"/>` +
+        ell(62, 68, 15, 7, '#e6eef5') +
+        circ(64, 38, 4, '#2a2350') + circ(65.4, 36.6, 1.3, '#fff') +
+        `<polygon points="30,27 36,27 33,33" fill="#fff"/><polygon points="37,34 43,34 40,40" fill="#fff"/>` +
+        `<polygon points="30,75 36,75 33,69" fill="#fff"/><polygon points="37,68 43,68 40,62" fill="#fff"/>` +
+        circ(10, 46, 3, '#bfe8ff') + circ(6, 36, 2, '#bfe8ff'),
+      story: 'כריש עגול פותח את הפה גדול. לכריש אין מדרגה למטה, הוא עגול! כָּה, כָּה, כָּרִישׁ!',
+      move: 'ידיים נפתחות ונסגרות, כמו הפה של הכריש',
+      mouth: 'back',
+    },
+    'ת': {
+      name: 'תָּו', sound: 'תָּה', word: 'תַּנּוּר', plain: 'תנור', emoji: '🔥',
+      d: 'M16 84 H30 V24 H68 Q80 24 80 36 V84',
+      deco: () =>
+        `<rect x="30" y="24" width="50" height="60" fill="#e9ecef"/>` +
+        `<rect x="38" y="46" width="34" height="28" rx="4" fill="#3b2a6b"/>` + `<rect x="42" y="56" width="26" height="14" rx="3" fill="#ff9f3d"/>` +
+        circ(42, 35, 3, '#6b6f80') + circ(54, 35, 3, '#6b6f80') + circ(66, 35, 3, '#6b6f80') +
+        `<rect x="40" y="9" width="30" height="13" rx="3" fill="#ff9fc0"/>` + circ(55, 6, 3.5, '#ff4f5f') +
+        circ(14, 84, 8, '#ffb03b', 'opacity="0.6"'),
+      story: 'תנור חם אופה עוגה, ויש לו רגל קטנה שבולטת למטה. תָּה, תָּה, תַּנּוּר!',
+      move: 'עומדים על רגל אחת, והשנייה בועטת קדימה כמו הרגל של ת',
+      mouth: 'tongue',
+    },
+  };
+
+  // אותיות סופיות – "צורת סוף" של דמות מוכרת (שלב מאוחר)
+  const FINALS = {
+    'ך': { base: 'כ', name: 'כַּף סוֹפִית', d: 'M22 22 H62 Q78 22 78 38 V104', story: 'כשהכריש מגיע לסוף המילה, הוא מותח את הזנב ישר למטה.' },
+    'ם': { base: 'מ', name: 'מֵם סוֹפִית', d: 'M24 22 H66 Q78 22 78 34 V82 H24 Z', story: 'בסוף המילה המלך סוגר את הדלת. המם הסופית סגורה, כמו קופסה.' },
+    'ן': { base: 'נ', name: 'נוּן סוֹפִית', d: 'M42 22 H50 Q58 22 58 32 V104', story: 'בסוף המילה הנון מותחת רגל ארוכה ישר למטה.' },
+    'ף': { base: 'פ', name: 'פֵּא סוֹפִית', d: 'M40 50 H24 V22 H62 Q78 22 78 38 V104', story: 'בסוף המילה הפיל מוריד את הגוף למטה, והחדק נשאר בפנים.' },
+    'ץ': { base: 'צ', name: 'צָדִי סוֹפִית', d: 'M26 20 Q30 48 70 58 M76 20 V104', story: 'בסוף המילה הציפור עפה מהענף, והרגל שלה נמתחת למטה.' },
+  };
+
+  // סדר לימוד: קודם אותיות השמות (ל = "אות התאומות" – ביובל וגם בעלמה), ואותיות דומות רחוקות זו מזו בזמן
+  const ORDER = ['ל', 'י', 'ע', 'ו', 'מ', 'ב', 'ה', 'ס', 'ר', 'א', 'פ', 'ש', 'נ', 'ג', 'ט', 'ק', 'ד', 'ז', 'צ', 'ח', 'כ', 'ת'];
+
+  // זוגות/קבוצות דומות – לתרגול הבחנה רק אחרי ששתיהן מוכרות
+  const SIMILAR = [['ב', 'כ'], ['ד', 'ר'], ['ה', 'ח'], ['ח', 'ת'], ['ה', 'ת'], ['ו', 'ז'], ['ע', 'צ'], ['ג', 'נ'], ['ס', 'ם'], ['ו', 'ן'], ['ב', 'פ'], ['ר', 'ך']];
+  // מה מבדיל – מוקרא אחרי תרגול הבחנה
+  const HINTS = {
+    'ב|כ': 'לבית יש מדרגה שבולטת למטה. הכריש עגול, בלי מדרגה.',
+    'ד|ר': 'לדגל יש פינה חדה שבולטת. לרגל יש ברך עגולה.',
+    'ה|ח': 'להליקופטר יש פתח קטן. החופה סגורה למעלה.',
+    'ח|ת': 'לתנור יש רגל קטנה למטה. לחופה אין.',
+    'ה|ת': 'להליקופטר יש פתח למעלה. לתנור יש רגל קטנה למטה.',
+    'ו|ז': 'הוורד מסתכל לצד אחד. הזיקוק מתפוצץ לשני הצדדים.',
+    'ע|צ': 'לעץ יש שני ענפים. הציפור יושבת על ענף ישר למטה.',
+    'ג|נ': 'לגרב יש רגל קטנה באלכסון. הנעל ישרה למטה.',
+    'ב|פ': 'לפיל יש חדק בפנים. לבית יש מדרגה בחוץ.',
+  };
+
+  // מילים עם תמונה (אימוג׳י). שמות התמונות מתחילים בצליל של האות.
+  const WORDS = [
+    ['אבא', '👨'], ['אמא', '👩'], ['אריה', '🦁'], ['אוטו', '🚗'], ['ארנב', '🐰'], ['אוזן', '👂'],
+    ['בית', '🏠'], ['בננה', '🍌'], ['בלון', '🎈'], ['ביצה', '🥚'], ['בובה', '🪆'],
+    ['גמל', '🐫'], ['גלידה', '🍦'], ['גזר', '🥕'], ['גשם', '🌧️'],
+    ['דג', '🐟'], ['דבורה', '🐝'], ['דב', '🐻'], ['דלת', '🚪'], ['דגל', '🚩'],
+    ['הר', '⛰️'], ['הליקופטר', '🚁'],
+    ['ורד', '🌹'],
+    ['זברה', '🦓'], ['זיקוקים', '🎆'],
+    ['חתול', '🐱'], ['חלב', '🥛'], ['חציל', '🍆'],
+    ['טלפון', '📱'], ['טרקטור', '🚜'], ['טווס', '🦚'],
+    ['יד', '✋'], ['ים', '🌊'], ['ילד', '👦'], ['יונה', '🕊️'], ['ירח', '🌙'],
+    ['כלב', '🐶'], ['כדור', '⚽'], ['כתר', '👑'], ['כוכב', '⭐'],
+    ['לב', '❤️'], ['לימון', '🍋'], ['לחם', '🍞'], ['לווייתן', '🐋'],
+    ['מים', '💧'], ['מלך', '🤴'], ['מטריה', '☂️'], ['מפתח', '🔑'],
+    ['נר', '🕯️'], ['נחש', '🐍'], ['נמר', '🐯'], ['נעל', '👟'],
+    ['סוס', '🐴'], ['סל', '🧺'], ['סבתא', '👵'], ['סבא', '👴'],
+    ['עץ', '🌳'], ['עוגה', '🎂'], ['ענן', '☁️'], ['עין', '👁️'], ['עכבר', '🐭'],
+    ['פיל', '🐘'], ['פרח', '🌸'], ['פרפר', '🦋'], ['פיצה', '🍕'],
+    ['צב', '🐢'], ['ציפור', '🐦'], ['צפרדע', '🐸'],
+    ['קוף', '🐒'], ['קיפוד', '🦔'], ['קשת', '🌈'],
+    ['רכבת', '🚂'], ['רגל', '🦵'], ['רובוט', '🤖'],
+    ['שמש', '☀️'], ['שעון', '⏰'], ['שועל', '🦊'],
+    ['תפוח', '🍎'], ['תות', '🍓'], ['תרנגול', '🐓'], ['תינוק', '👶'],
+  ].map(([w, e]) => ({ w, e }));
+
+  // מילים קצרות לבנייה ולקריאה (בלי סופיות – לשלב 3), ומילים עם סופיות (שלב 4)
+  const BUILD = ['דג', 'יד', 'לב', 'סל', 'דב', 'נר', 'הר', 'צב', 'אבא', 'אמא', 'בית', 'סוס', 'תות', 'פיל', 'גזר', 'דלת', 'חלב', 'כלב', 'ורד', 'דגל', 'רגל', 'כתר', 'נעל', 'ילד', 'ירח', 'גמל', 'עוגה', 'סבא', 'בובה', 'כדור', 'חתול', 'סבתא'];
+  const BUILD_FINAL = ['עץ', 'ים', 'קוף', 'מלך', 'מים', 'ענן', 'שעון', 'לחם', 'לימון'];
+
+  const FINAL_TO_BASE = { 'ך': 'כ', 'ם': 'מ', 'ן': 'נ', 'ף': 'פ', 'ץ': 'צ' };
+
+  Object.assign(K, { LETTERS: L, FINALS, ORDER, SIMILAR, HINTS, WORDS, BUILD, BUILD_FINAL, FINAL_TO_BASE });
+  K.wordInfo = (w) => WORDS.find((x) => x.w === w);
+  K.baseOf = (ch) => FINAL_TO_BASE[ch] || ch;
+})();
+
+/* ציור: אות משובצת בדרגות דעיכה, פה, ינשוף מדריך, עפיפון, בלון */
+(function () {
+  const K = window.K;
+  const INK = '#3b2a6b';
+  const VB = '-8 -14 116 132';
+
+  // support: 0 = ציור מלא, 1 = ציור דהוי, 2 = רק קו האות, 3 = אות בגופן רגיל
+  K.letterArt = function (ch, support = 0, opts = {}) {
+    const fin = K.FINALS[ch];
+    const info = K.LETTERS[ch];
+    if (support >= 3) {
+      return `<div class="glyph-font${opts.small ? ' small' : ''}" aria-label="${ch}">${ch}</div>`;
+    }
+    const d = info ? info.d : fin.d;
+    const deco = info && support < 2 ? info.deco() : '';
+    const op = support === 1 ? 0.28 : 1;
+    const cls = opts.cls ? ` class="${opts.cls}"` : '';
+    return `<svg${cls} viewBox="${VB}" role="img" aria-label="${ch}">` +
+      (deco ? `<g class="deco" opacity="${op}">${deco}</g>` : '') +
+      `<path class="glyph" d="${d}" fill="none" stroke="${opts.ink || INK}" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>` +
+      `</svg>`;
+  };
+
+  // אות לכתיבה – קו מונפש שמראה את כיוון הכתיבה
+  K.letterTrace = function (ch) {
+    const info = K.LETTERS[ch] || K.FINALS[ch];
+    const parts = info.d.split(/(?=M)/);
+    return `<svg viewBox="${VB}" class="trace">` +
+      `<path d="${info.d}" fill="none" stroke="#e6e0f5" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>` +
+      parts.map((p, i) => `<path d="${p}" pathLength="100" class="trace-stroke" style="animation-delay:${0.3 + i * 1.1}s" fill="none" stroke="${INK}" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>`).join('') +
+      `</svg>`;
+  };
+
+  // תנוחות פה (בויר ואהרי 2011): שפתיים סגורות, לשון למעלה, שיניים, פה פתוח…
+  K.mouthArt = function (type) {
+    const lips = '#e8607a', in_ = '#7a2238', teeth = '#fff', tongue = '#ff8fa3';
+    const face = `<ellipse cx="60" cy="40" rx="56" ry="36" fill="#ffd9b3"/>`;
+    const m = {
+      lips: `<path d="M24 40 Q60 22 96 40 Q60 58 24 40Z" fill="${lips}"/><path d="M26 40 Q60 44 94 40" stroke="${in_}" stroke-width="3" fill="none"/>`,
+      open: `<ellipse cx="60" cy="42" rx="26" ry="22" fill="${lips}"/><ellipse cx="60" cy="43" rx="20" ry="16" fill="${in_}"/><ellipse cx="60" cy="52" rx="13" ry="6" fill="${tongue}"/>`,
+      tongue: `<ellipse cx="60" cy="42" rx="30" ry="16" fill="${lips}"/><ellipse cx="60" cy="42" rx="24" ry="11" fill="${in_}"/><rect x="40" y="31" width="40" height="6" rx="2" fill="${teeth}"/><path d="M44 50 Q60 30 76 50Z" fill="${tongue}"/>`,
+      hiss: `<path d="M22 40 Q60 22 98 40 Q60 58 22 40Z" fill="${lips}"/><rect x="34" y="34" width="52" height="12" rx="4" fill="${teeth}"/><line x1="34" y1="40" x2="86" y2="40" stroke="#ddd" stroke-width="1.5"/>`,
+      back: `<ellipse cx="60" cy="42" rx="24" ry="17" fill="${lips}"/><ellipse cx="60" cy="42" rx="18" ry="12" fill="${in_}"/><path d="M46 52 Q60 44 74 52Z" fill="${tongue}"/>`,
+      roll: `<ellipse cx="60" cy="42" rx="26" ry="16" fill="${lips}"/><ellipse cx="60" cy="42" rx="20" ry="11" fill="${in_}"/><path d="M46 50 Q60 34 74 50 Q60 46 46 50Z" fill="${tongue}"/>`,
+      smile: `<path d="M18 34 Q60 66 102 34 Q60 46 18 34Z" fill="${lips}"/><path d="M28 38 Q60 50 92 38 Q60 44 28 38Z" fill="${teeth}"/>`,
+      teeth: `<path d="M24 40 Q60 24 96 40 Q60 56 24 40Z" fill="${lips}"/><rect x="38" y="32" width="44" height="10" rx="3" fill="${teeth}"/>`,
+    }[type] || '';
+    return `<svg viewBox="0 0 120 80" class="mouth">${face}${m}</svg>`;
+  };
+  K.MOUTH_TIP = {
+    lips: 'השפתיים נסגרות ואז נפתחות בפיצוץ קטן',
+    open: 'הפה פתוח גדול',
+    tongue: 'קצה הלשון נוגע למעלה, מאחורי השיניים',
+    hiss: 'השיניים קרובות, והאוויר שורק',
+    back: 'הצליל יוצא מאחור, מהגרון',
+    roll: 'הלשון רוטטת, כמו מנוע קטן',
+    smile: 'מחייכים חיוך רחב',
+    teeth: 'השיניים העליונות נוגעות בשפה התחתונה',
+  };
+
+  // ינשופה המדריכה – "נוֹגָה"
+  K.owl = function (mood = 'happy') {
+    const eyes = mood === 'sleep'
+      ? `<path d="M34 46 Q42 52 50 46" stroke="#3b2a6b" stroke-width="3.5" fill="none" stroke-linecap="round"/><path d="M70 46 Q78 52 86 46" stroke="#3b2a6b" stroke-width="3.5" fill="none" stroke-linecap="round"/>`
+      : `<circle cx="42" cy="46" r="13" fill="#fff"/><circle cx="78" cy="46" r="13" fill="#fff"/><circle class="pupil" cx="44" cy="47" r="6.5" fill="#3b2a6b"/><circle class="pupil" cx="76" cy="47" r="6.5" fill="#3b2a6b"/><circle cx="46" cy="44" r="2" fill="#fff"/><circle cx="78" cy="44" r="2" fill="#fff"/>`;
+    return `<svg viewBox="0 0 120 130" class="owl ${mood}">
+      <path d="M20 30 L30 8 L44 24 Z M100 30 L90 8 L76 24 Z" fill="#8a63d2"/>
+      <ellipse cx="60" cy="72" rx="46" ry="52" fill="#a07ce8"/>
+      <ellipse cx="60" cy="86" rx="30" ry="34" fill="#efe6ff"/>
+      <path d="M44 84 q4 4 8 0 M56 92 q4 4 8 0 M68 84 q4 4 8 0 M50 102 q4 4 8 0 M62 102 q4 4 8 0" stroke="#c9b5f2" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+      ${eyes}
+      <path d="M54 58 L66 58 L60 68 Z" fill="#ffb03b"/>
+      <ellipse class="wing-l" cx="16" cy="80" rx="11" ry="26" fill="#8a63d2"/>
+      <ellipse class="wing-r" cx="104" cy="80" rx="11" ry="26" fill="#8a63d2"/>
+      <path d="M44 122 l-4 6 M50 123 l0 6 M70 123 l0 6 M76 122 l4 6" stroke="#ffb03b" stroke-width="3.5" stroke-linecap="round"/>
+      ${mood === 'sleep' ? '<path d="M28 6 Q60 -10 92 6 L86 16 Q60 4 34 16Z" fill="#5bbcf0"/><circle cx="96" cy="4" r="5" fill="#fff"/>' : ''}
+    </svg>`;
+  };
+
+  const KITE_COLORS = [['#ff7a59', '#ffc83d'], ['#2bb3a3', '#9be07a'], ['#8a63d2', '#ff8fb1'], ['#4f9fe0', '#ffd84a']];
+  K.kite = function (i) {
+    const [a, b] = KITE_COLORS[i % KITE_COLORS.length];
+    return `<svg viewBox="0 0 100 160" class="kite-svg"><path d="M50 4 L92 56 L50 112 L8 56 Z" fill="${a}"/><path d="M50 4 L92 56 L50 56 Z M50 56 L8 56 L50 112Z" fill="${b}"/>` +
+      `<path d="M50 112 Q40 128 52 138 Q64 148 50 158" stroke="#7a6a9a" stroke-width="2" fill="none"/>` +
+      `<path d="M44 126 l8 4 l-8 4z M54 144 l-8 4 l8 4z" fill="${a}"/></svg>`;
+  };
+
+  const BAL = ['#ff6b8b', '#ffc83d', '#5bbcf0', '#9be07a', '#b48cff', '#ff9f4a'];
+  K.balloon = function (i) {
+    const c = BAL[i % BAL.length];
+    return `<svg viewBox="0 0 80 130" class="balloon-svg"><ellipse cx="40" cy="42" rx="34" ry="40" fill="${c}"/><ellipse cx="28" cy="26" rx="8" ry="12" fill="#fff" opacity=".45"/><path d="M36 82 L44 82 L40 88Z" fill="${c}"/><path d="M40 88 Q34 104 42 114 Q48 122 40 130" stroke="#9a8fb5" stroke-width="2" fill="none"/></svg>`;
+  };
+})();
+
+/* מנוע הלמידה: שמירה, מודל ידע לכל ילדה, שלב סמוי, חזרה מרווחת ומסתגלת, ותכנון מפגש */
+(function () {
+  const K = window.K;
+  const KEY = 'kfar-otiot-v1';
+
+  // ---------- שמירה ----------
+  let mem = null;
+  function load() {
+    if (mem) return mem;
+    try { mem = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (e) { mem = null; }
+    if (!mem || typeof mem !== 'object') mem = {};
+    mem.profiles = mem.profiles || {};
+    mem.settings = mem.settings || { items: 12, voice: true };
+    return mem;
+  }
+  function save() {
+    try { localStorage.setItem(KEY, JSON.stringify(mem)); } catch (e) { /* בלי אחסון – המשחק עדיין עובד */ }
+  }
+  K.store = { load, save };
+
+  const norm = (n) => n.trim().replace(/\s+/g, ' ');
+  K.profiles = () => Object.values(load().profiles).sort((a, b) => (b.lastPlayed || 0) - (a.lastPlayed || 0));
+  K.getProfile = (id) => load().profiles[id];
+  K.findByName = (name) => K.profiles().find((p) => p.name === norm(name));
+
+  K.createProfile = function (name, avatar) {
+    const db = load();
+    const existing = K.findByName(name);
+    if (existing) return existing;
+    const id = 'p' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+    const p = {
+      id, name: norm(name), avatar: avatar || '🦊', created: Date.now(), lastPlayed: Date.now(),
+      placementDone: false, letters: {}, finals: {}, words: { s: 0, n: 0, c: 0 },
+      sessions: 0, lastNew: null, history: [], log: [],
+    };
+    db.profiles[id] = p;
+    save();
+    return p;
+  };
+  K.deleteProfile = (id) => { delete load().profiles[id]; save(); };
+  K.touch = (p) => { p.lastPlayed = Date.now(); save(); };
+
+  // ---------- מודל ידע ----------
+  // s = חוזק 0..6 ; intro = כבר הוצגה בשיעור ; conf = עם מה התבלבלה
+  function rec(p, ch) {
+    const bag = K.LETTERS[ch] ? p.letters : p.finals;
+    return (bag[ch] = bag[ch] || { s: 0, n: 0, c: 0, conf: {}, last: 0, intro: false });
+  }
+  K.rec = rec;
+
+  // דעיכת התומך: ככל שהאות יציבה יותר – פחות ציור
+  K.supportFor = function (p, ch) {
+    const r = rec(p, ch);
+    if (!K.LETTERS[ch]) return 2;
+    if (r.s < 1.5) return 0;
+    if (r.s < 2.8) return 1;
+    if (r.s < 4) return 2;
+    return 3;
+  };
+
+  K.record = function (p, ch, correct, chosen, support) {
+    const r = rec(p, ch);
+    r.n++;
+    r.last = p.sessions;
+    if (correct) {
+      r.c++;
+      // תשובה נכונה מול אות "חשופה" שווה יותר מתשובה עם ציור
+      r.s = Math.min(6, r.s + [0.55, 0.7, 0.85, 1][support ?? 3]);
+    } else {
+      r.s = Math.max(0, r.s - 1.1);
+      if (chosen && chosen !== ch) r.conf[chosen] = (r.conf[chosen] || 0) + 1;
+    }
+    p.log.push([Date.now(), ch, correct ? 1 : 0, chosen || '']);
+    if (p.log.length > 600) p.log.splice(0, p.log.length - 600);
+    save();
+  };
+  K.recordWord = function (p, correct) {
+    p.words.n++;
+    if (correct) { p.words.c++; p.words.s = Math.min(6, p.words.s + 0.6); } else p.words.s = Math.max(0, p.words.s - 0.8);
+    save();
+  };
+
+  K.introduced = (p) => K.ORDER.filter((ch) => rec(p, ch).intro);
+  K.knownLetters = (p) => K.ORDER.filter((ch) => rec(p, ch).intro && rec(p, ch).s >= 3.5);
+  K.masteredLetters = (p) => K.ORDER.filter((ch) => rec(p, ch).s >= 5);
+
+  // שלב סמוי – לא מוצג לילדה בשום מקום, רק באזור ההורים
+  K.stage = function (p) {
+    if (p.stageOverride) return p.stageOverride;
+    const known = K.knownLetters(p).length;
+    if (known < 5) return 1;
+    if (known < 12) return 2;
+    if (known < 20 || p.words.s < 2) return 3;
+    return 4;
+  };
+  K.STAGE_NAMES = { 1: 'היכרות ראשונה עם אותיות', 2: 'אותיות וצליל פותח', 3: 'מילים קצרות', 4: 'אותיות סופיות וקריאת מילים' };
+
+  // ---------- בוחן פתיחה סמוי ("עפיפונים") ----------
+  K.PLACEMENT_ORDER = ['ל', 'י', 'ע', 'מ', 'ב', 'א', 'ש', 'ו', 'ה', 'ס', 'ד', 'ר', 'פ', 'נ', 'ג', 'כ', 'ת', 'ק', 'ט', 'ח', 'ז', 'צ'];
+  K.applyPlacement = function (p, results, wordResults) {
+    // results: {ch: true/false}; אותיות שלא נבדקו – נשארות לא ידועות
+    for (const [ch, ok] of Object.entries(results)) {
+      const r = rec(p, ch);
+      if (ok) { r.s = 3.6; r.intro = true; } else { r.s = 0; }
+    }
+    const tested = Object.keys(results).length;
+    const right = Object.values(results).filter(Boolean).length;
+    // מצליחה כמעט בהכול ונבדקו מעט – אותיות שלא נבדקו מקבלות "אולי"
+    if (tested < K.ORDER.length && right >= tested - 1 && tested >= 12) {
+      K.ORDER.forEach((ch) => { if (!(ch in results)) { const r = rec(p, ch); r.s = 2; r.intro = true; } });
+    }
+    const wr = wordResults.filter(Boolean).length;
+    p.words.s = wr >= 4 ? 3 : wr >= 2 ? 1.5 : 0;
+    p.placementDone = true;
+    p.placement = { date: Date.now(), tested, right, words: `${wr}/${wordResults.length}` };
+    save();
+  };
+
+  // ---------- עזרים ----------
+  const shuffle = (a) => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+  const pick = (a) => a[Math.floor(Math.random() * a.length)];
+  K.shuffle = shuffle; K.pick = pick;
+  const similarTo = (ch) => K.SIMILAR.filter((g) => g.includes(ch)).flat().filter((x) => x !== ch && K.LETTERS[x]);
+
+  // מסיחים: בהתחלה אותיות שונות מאוד; בשלב מתקדם גם אותיות דומות שכבר מוכרות
+  K.distractors = function (p, ch, n) {
+    const intro = K.introduced(p).filter((x) => x !== ch);
+    const sim = similarTo(ch).filter((x) => intro.includes(x) && rec(p, x).s >= 2.5 && rec(p, ch).s >= 2.5);
+    const pool = shuffle(intro.filter((x) => !similarTo(ch).includes(x)));
+    const extra = shuffle(K.ORDER.filter((x) => x !== ch && !intro.includes(x) && !similarTo(ch).includes(x)));
+    const out = [];
+    if (sim.length && K.stage(p) >= 2 && Math.random() < 0.5) out.push(pick(sim));
+    for (const x of [...pool, ...extra]) { if (out.length >= n) break; if (!out.includes(x)) out.push(x); }
+    return out.slice(0, n);
+  };
+
+  // מספר אפשרויות לפי הצלחה אחרונה
+  K.choiceCount = function (p) {
+    const recent = p.log.slice(-12);
+    const acc = recent.length ? recent.filter((x) => x[2]).length / recent.length : 0.7;
+    const st = K.stage(p);
+    let n = st === 1 ? 2 : 3;
+    if (acc > 0.8 && recent.length >= 8) n++;
+    if (acc < 0.5) n--;
+    return Math.max(2, Math.min(4, n));
+  };
+
+  // משקל לחזרה: חלשות, שלא נראו מזמן ושהתבלבלו בהן – חוזרות יותר
+  function weight(p, ch) {
+    const r = rec(p, ch);
+    const since = p.sessions - (r.last || 0);
+    const errRate = r.n ? 1 - r.c / r.n : 0.5;
+    return (6.5 - r.s) * 1.4 + Math.min(4, since) * 0.8 + errRate * 3 + 0.3;
+  }
+  function weightedPick(p, list, avoid = []) {
+    const opts = list.filter((x) => !avoid.includes(x));
+    if (!opts.length) return pick(list);
+    const ws = opts.map((x) => weight(p, x));
+    let t = Math.random() * ws.reduce((a, b) => a + b, 0);
+    for (let i = 0; i < opts.length; i++) { t -= ws[i]; if (t <= 0) return opts[i]; }
+    return opts[opts.length - 1];
+  }
+
+  K.nextNewLetter = function (p) {
+    return K.ORDER.find((ch) => !rec(p, ch).intro) || null;
+  };
+  K.nextFinal = function (p) {
+    return Object.keys(K.FINALS).find((f) => !rec(p, f).intro && rec(p, K.FINALS[f].base).s >= 3) || null;
+  };
+
+  // מילים שכל האותיות שלהן כבר הוצגו
+  K.buildableWords = function (p, withFinals) {
+    const intro = new Set(K.introduced(p));
+    Object.keys(K.FINALS).forEach((f) => { if (rec(p, f).intro) intro.add(f); });
+    const list = withFinals ? [...K.BUILD, ...K.BUILD_FINAL] : K.BUILD;
+    return list.filter((w) => Array.from(w).every((c) => intro.has(c)));
+  };
+  K.firstSoundWords = function (p) {
+    const intro = new Set(K.introduced(p));
+    return K.WORDS.filter((x) => intro.has(x.w[0]));
+  };
+
+  // ---------- תכנון מפגש (10–15 דקות) ----------
+  K.planSession = function (p, nItems, opts = {}) {
+    nItems = nItems || load().settings.items || 12;
+    const st = K.stage(p);
+    const plan = { lesson: null, finalLesson: null, items: [] };
+
+    // אות חדשה אחת בכל מפגש (ג׳ונס ורויצל) – אם המפגש הקודם לא היה קשה מדי
+    const last = p.history[p.history.length - 1];
+    const struggling = last && last.total >= 6 && last.right / last.total < 0.5;
+    const nl = K.nextNewLetter(p);
+    if (opts.noLesson) { /* משחק ביחד – רק תרגול של מה שכבר נלמד */ }
+    else if (nl && !(struggling && K.introduced(p).length >= 3)) plan.lesson = nl;
+    else if (!nl && st >= 3) plan.finalLesson = K.nextFinal(p);
+
+    const pool = K.introduced(p).concat(plan.lesson && !K.introduced(p).includes(plan.lesson) ? [plan.lesson] : []);
+    if (!pool.length) return plan;
+
+    const types = [];
+    const push = (t, n) => { for (let i = 0; i < n; i++) types.push(t); };
+    if (st === 1) { push('pick', nItems - 2); push('balloons', 1); push('pick', 1); }
+    else if (st === 2) { push('pick', nItems - 6); push('first', 3); push('discriminate', 1); push('balloons', 1); push('pick', 1); }
+    else if (st === 3) { push('pick', nItems - 8); push('first', 2); push('discriminate', 1); push('build', 3); push('read', 1); push('balloons', 1); }
+    else { push('pick', nItems - 9); push('first', 1); push('discriminate', 1); push('build', 3); push('read', 3); push('balloons', 1); }
+
+    // אם אין מילים לבנות – מחליפים בתרגול אותיות
+    const words = K.buildableWords(p, st >= 4);
+    const pairs = K.SIMILAR.filter(([a, b]) => K.LETTERS[a] && K.LETTERS[b] && rec(p, a).intro && rec(p, b).intro && rec(p, a).s >= 2 && rec(p, b).s >= 2);
+    const finalsIntro = Object.keys(K.FINALS).filter((f) => rec(p, f).intro);
+
+    const recentLetters = [];
+    let newLetterCount = 0;
+    const items = shuffle(types).map((t) => {
+      if ((t === 'build' || t === 'read') && words.length < 2) t = 'pick';
+      if (t === 'discriminate' && !pairs.length) t = 'pick';
+      if (t === 'first' && K.firstSoundWords(p).length < 3) t = 'pick';
+      if (t === 'pick' || t === 'balloons') {
+        let ch;
+        // האות החדשה חוזרת שלוש פעמים במפגש
+        if (plan.lesson && newLetterCount < 3 && Math.random() < 0.45) { ch = plan.lesson; newLetterCount++; }
+        else if (finalsIntro.length && st >= 4 && Math.random() < 0.2) ch = pick(finalsIntro);
+        else ch = weightedPick(p, pool, recentLetters.slice(-2));
+        recentLetters.push(ch);
+        return { type: t, ch };
+      }
+      if (t === 'first') {
+        const fw = K.firstSoundWords(p);
+        const weak = weightedPick(p, [...new Set(fw.map((x) => x.w[0]))]);
+        const opts = fw.filter((x) => x.w[0] === weak);
+        return { type: t, word: pick(opts).w };
+      }
+      if (t === 'discriminate') {
+        const pr = pairs.slice().sort((x, y) => (rec(p, x[0]).s + rec(p, x[1]).s) - (rec(p, y[0]).s + rec(p, y[1]).s))[0];
+        return { type: t, pair: pr, ch: pick(pr) };
+      }
+      return { type: t, word: pick(words) };
+    });
+    // הבטחה שהאות החדשה מופיעה לפחות פעמיים
+    if (plan.lesson) {
+      const idx = items.map((x, i) => (x.type === 'pick' ? i : -1)).filter((i) => i >= 0);
+      let have = items.filter((x) => x.ch === plan.lesson).length;
+      for (const i of idx) { if (have >= 2) break; if (items[i].ch !== plan.lesson) { items[i].ch = plan.lesson; have++; } }
+    }
+    plan.items = items;
+    return plan;
+  };
+
+  // משחק ביחד: תורות, כל אחת מקבלת פריטים לפי הידע שלה
+  K.planCoop = function (pa, pb, perPlayer) {
+    const a = K.planSession(pa, perPlayer, { noLesson: true }).items, b = K.planSession(pb, perPlayer, { noLesson: true }).items;
+    const out = [];
+    for (let i = 0; i < Math.max(a.length, b.length); i++) {
+      if (a[i]) out.push({ ...a[i], who: pa.id });
+      if (b[i]) out.push({ ...b[i], who: pb.id });
+    }
+    return out;
+  };
+
+  K.endSession = function (p, stats, newLetter) {
+    p.sessions++;
+    p.history.push({ date: Date.now(), total: stats.total, right: stats.right, newLetter: newLetter || null });
+    if (p.history.length > 200) p.history.shift();
+    if (newLetter) p.lastNew = newLetter;
+    p.lastPlayed = Date.now();
+    save();
+  };
+
+  // ---------- גיבוי ----------
+  K.exportProfile = (p) => btoa(unescape(encodeURIComponent(JSON.stringify(p))));
+  K.importProfile = function (code) {
+    const p = JSON.parse(decodeURIComponent(escape(atob(code.trim()))));
+    if (!p || !p.id || !p.name || !p.letters) throw new Error('bad');
+    load().profiles[p.id] = p;
+    save();
+    return p;
+  };
+})();
+
+/* קול: הקראה בעברית (speechSynthesis) וצלילי משוב קצרים (WebAudio) */
+(function () {
+  const K = window.K;
+  const synth = window.speechSynthesis;
+  let voice = null;
+
+  function pickVoice() {
+    if (!synth) return null;
+    const vs = synth.getVoices();
+    const he = vs.filter((v) => /^he|^iw/i.test(v.lang));
+    // עדיפות לקול נשי/טבעי אם יש (Carmit ב-iOS)
+    voice = he.find((v) => /carmit|google|natural|online/i.test(v.name)) || he[0] || null;
+    return voice;
+  }
+  if (synth) { pickVoice(); synth.onvoiceschanged = pickVoice; }
+  K.hasHebrewVoice = () => !!(voice || pickVoice());
+
+  let token = 0;
+  K.stopSpeech = () => { token++; try { synth && synth.cancel(); } catch (e) { /* */ } };
+
+  // מחזיר הבטחה שמתממשת בסוף ההקראה (או אחרי זמן מקסימלי – יש דפדפנים שלא שולחים onend)
+  K.say = function (text, opts = {}) {
+    const st = K.store.load().settings;
+    if (!synth || !text || st.voice === false) return Promise.resolve();
+    const my = ++token;
+    try { synth.cancel(); } catch (e) { /* */ }
+    return new Promise((res) => {
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = 'he-IL';
+      if (voice || pickVoice()) u.voice = voice;
+      u.rate = opts.rate || 0.88;
+      u.pitch = opts.pitch || 1.08;
+      let done = false;
+      const fin = () => { if (!done) { done = true; res(); } };
+      u.onend = fin; u.onerror = fin;
+      setTimeout(fin, 1500 + text.length * 110);
+      if (my !== token) return fin();
+      try { synth.speak(u); } catch (e) { fin(); }
+    });
+  };
+  // רצף משפטים; נעצר אם התחילה הקראה אחרת
+  K.sayAll = async function (parts) {
+    for (const t of parts) {
+      const pr = K.say(t);
+      const mine = token;
+      await pr;
+      if (token !== mine) return;
+      await new Promise((r) => setTimeout(r, 220));
+      if (token !== mine) return;
+    }
+  };
+  // "פתיחת" הקול ב-iOS – חייב לקרות בתוך לחיצה
+  K.unlockAudio = function () {
+    try { if (synth) { const u = new SpeechSynthesisUtterance(' '); u.volume = 0; synth.speak(u); } } catch (e) { /* */ }
+    ctx();
+  };
+
+  // ---------- צלילים ----------
+  let ac = null;
+  function ctx() {
+    try {
+      ac = ac || new (window.AudioContext || window.webkitAudioContext)();
+      if (ac.state === 'suspended') ac.resume();
+    } catch (e) { ac = null; }
+    return ac;
+  }
+  function tone(freq, start, dur, type = 'sine', vol = 0.18) {
+    const a = ctx(); if (!a) return;
+    const o = a.createOscillator(), g = a.createGain();
+    o.type = type; o.frequency.setValueAtTime(freq, a.currentTime + start);
+    g.gain.setValueAtTime(0, a.currentTime + start);
+    g.gain.linearRampToValueAtTime(vol, a.currentTime + start + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.001, a.currentTime + start + dur);
+    o.connect(g).connect(a.destination);
+    o.start(a.currentTime + start); o.stop(a.currentTime + start + dur + 0.05);
+  }
+  K.sfx = {
+    good() { tone(660, 0, 0.18, 'triangle'); tone(880, 0.1, 0.22, 'triangle'); tone(1320, 0.2, 0.3, 'sine', 0.12); },
+    soft() { tone(392, 0, 0.25, 'sine', 0.12); tone(330, 0.12, 0.3, 'sine', 0.1); },
+    tap() { tone(520, 0, 0.08, 'sine', 0.1); },
+    pop() { tone(900, 0, 0.06, 'square', 0.08); tone(1400, 0.03, 0.08, 'sine', 0.1); },
+    whoosh() { [300, 420, 560, 740].forEach((f, i) => tone(f, i * 0.05, 0.15, 'sine', 0.07)); },
+    fanfare() { [523, 659, 784, 1046, 784, 1046].forEach((f, i) => tone(f, i * 0.13, 0.25, 'triangle', 0.14)); },
+    magic() { [880, 1108, 1318, 1760, 2217].forEach((f, i) => tone(f, i * 0.07, 0.3, 'sine', 0.08)); },
+  };
+})();
+
+/* כפר האותיות – מסכים וזרימת המשחק */
+(function () {
+  const K = window.K;
+  const $ = (s, r = document) => r.querySelector(s);
+  const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+  const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const PRAISE = ['כל הכבוד!', 'נכון!', 'מצוין!', 'יופי!', 'איזה יופי!', 'נהדר!', 'בדיוק!'];
+  const AVATARS = ['🦊', '🐰', '🐱', '🐼', '🦄', '🐶', '🐸', '🦁', '🐨', '🐯', '🦋', '🐢'];
+  const HOUSE_COLORS = ['#ff7a6b', '#ffb03b', '#2bb3a3', '#8a63d2', '#4f9fe0', '#ff8fb1'];
+
+  let cur = null;        // הפרופיל הפעיל
+  let repeatFn = null;   // מה כפתור הרמקול מקריא שוב
+  let screenId = 0;      // מונע תגובות ממסך שכבר עזבנו
+
+  // ---------- מסגרת ----------
+  function topbar({ home = false, back = null, progress = null, parent = false, speaker = true } = {}) {
+    const tb = $('#topbar');
+    tb.innerHTML =
+      (home ? `<button class="icon-btn" id="tb-home" aria-label="הביתה">🏠</button>` : '') +
+      (back ? `<button class="icon-btn" id="tb-back" aria-label="חזרה">➡️</button>` : '') +
+      `<div class="grow">${progress ? progressHtml(progress) : ''}</div>` +
+      (speaker ? `<button class="icon-btn" id="tb-say" aria-label="להקריא שוב">🔊</button>` : '') +
+      (parent ? `<button class="icon-btn small" id="tb-parent" aria-label="אזור הורים">⚙️</button>` : '');
+    if (home) $('#tb-home').onclick = () => { K.sfx.tap(); cur ? childHome() : welcome(); };
+    if (back) $('#tb-back').onclick = () => { K.sfx.tap(); back(); };
+    if (speaker) $('#tb-say').onclick = () => { K.unlockAudio(); repeatFn && repeatFn(); };
+    if (parent) $('#tb-parent').onclick = () => parentGate();
+  }
+  function progressHtml([i, n]) {
+    return `<div class="progress" aria-label="התקדמות">${Array.from({ length: n }, (_, k) => `<i class="${k < i ? 'done' : k === i ? 'now' : ''}"></i>`).join('')}</div>`;
+  }
+  function setProgress(i, n) { const g = $('#topbar .grow'); if (g) g.innerHTML = progressHtml([i, n]); }
+
+  function screen(html) {
+    screenId++;
+    K.stopSpeech();
+    const st = $('#stage');
+    st.innerHTML = html;
+    st.classList.remove('enter'); void st.offsetWidth; st.classList.add('enter');
+    st.scrollTop = 0;
+    return screenId;
+  }
+  const alive = (id) => id === screenId;
+
+  function speak(text, extra) {
+    repeatFn = () => (Array.isArray(text) ? K.sayAll(text) : K.say(text));
+    if (extra) repeatFn = extra;
+    return Array.isArray(text) ? K.sayAll(text) : K.say(text);
+  }
+
+  function owlSays(text, mood = 'happy') {
+    return `<div class="owl-wrap">${K.owl(mood)}<div class="bubble"><p class="say">${esc(text)}</p></div></div>`;
+  }
+
+  function confetti(n = 70) {
+    const c = document.createElement('div');
+    c.className = 'confetti';
+    const cols = ['#ff7a59', '#ffc83d', '#2bb3a3', '#8a63d2', '#ff8fb1', '#4f9fe0'];
+    c.innerHTML = Array.from({ length: n }, () =>
+      `<i style="left:${Math.random() * 100}%;background:${K.pick(cols)};animation-duration:${2 + Math.random() * 2.5}s;animation-delay:${Math.random() * 0.8}s;transform:rotate(${Math.random() * 360}deg)"></i>`).join('');
+    document.body.appendChild(c);
+    setTimeout(() => c.remove(), 5500);
+  }
+
+  // ---------- מסך פתיחה: מי משחקת? ----------
+  function welcome() {
+    cur = null;
+    topbar({ parent: true });
+    const profs = K.profiles();
+    const presets = ['יובל', 'עלמה'].filter((n) => !K.findByName(n));
+    const placed = profs.filter((p) => p.placementDone);
+    screen(`
+      <h1 class="logo">${Array.from('כפר האותיות').map((c) => (c === ' ' ? ' ' : `<span class="lt">${c}</span>`)).join('')}</h1>
+      ${owlSays(profs.length ? 'מי משחקת היום?' : 'שלום! אני נוגה הינשופה. מי באה לשחק?')}
+      <div class="players">
+        ${profs.map((p) => `<button class="player" data-id="${p.id}"><span class="av">${p.avatar}</span><span class="nm">${esc(p.name)}</span></button>`).join('')}
+        ${presets.map((n) => `<button class="player new" data-new="${n}"><span class="av">✨</span><span class="nm">${n}</span></button>`).join('')}
+        <button class="player new" data-other="1"><span class="av">➕</span><span class="nm" style="font-size:24px">שם אחר</span></button>
+      </div>
+      ${placed.length >= 2 ? `<button class="btn teal" id="coop">👭 משחקות ביחד</button>` : ''}
+    `);
+    speak(profs.length ? 'מי משחקת היום?' : 'שלום! אני נוגה הינשופה. מי באה לשחק?');
+    $$('.player[data-id]').forEach((b) => (b.onclick = () => { K.unlockAudio(); K.sfx.tap(); openProfile(K.getProfile(b.dataset.id)); }));
+    $$('.player[data-new]').forEach((b) => (b.onclick = () => { K.unlockAudio(); K.sfx.tap(); pickAvatar(b.dataset.new); }));
+    $('.player[data-other]').onclick = () => { K.unlockAudio(); K.sfx.tap(); askName(); };
+    if ($('#coop')) $('#coop').onclick = () => { K.unlockAudio(); K.sfx.tap(); coopSetup(); };
+  }
+
+  function askName() {
+    topbar({ back: welcome });
+    screen(`
+      ${owlSays('איך קוראים לך?')}
+      <form id="nf" class="row" autocomplete="off">
+        <input id="name-input" class="name-input" maxlength="16" placeholder="השם שלי" aria-label="שם">
+        <button class="btn" type="submit">✓</button>
+      </form>
+      <p class="note">אם כבר שיחקת, כותבים את אותו השם וחוזרים בדיוק למקום שעצרת.</p>
+    `);
+    speak('איך קוראים לך? אפשר לבקש מאבא או מאמא לכתוב.');
+    const inp = $('#name-input');
+    setTimeout(() => inp.focus(), 300);
+    $('#nf').onsubmit = (e) => {
+      e.preventDefault();
+      const n = inp.value.trim();
+      if (!n) return;
+      const ex = K.findByName(n);
+      if (ex) openProfile(ex); else pickAvatar(n);
+    };
+  }
+
+  function pickAvatar(name) {
+    topbar({ back: welcome });
+    let sel = null;
+    screen(`
+      ${owlSays(`שלום ${name}! בחרי חבר שישחק איתך`)}
+      <div class="avatars">${AVATARS.map((a) => `<button data-a="${a}" aria-label="${a}">${a}</button>`).join('')}</div>
+      <button class="btn" id="go" hidden>יוצאות לדרך!</button>
+    `);
+    speak(`שלום ${name}! בחרי חבר שישחק איתך.`);
+    $$('.avatars button').forEach((b) => (b.onclick = () => {
+      K.sfx.pop();
+      $$('.avatars button').forEach((x) => x.classList.remove('sel'));
+      b.classList.add('sel'); sel = b.dataset.a; $('#go').hidden = false;
+    }));
+    $('#go').onclick = () => {
+      K.sfx.tap();
+      const p = K.createProfile(name, sel);
+      openProfile(p);
+    };
+  }
+
+  function openProfile(p) {
+    cur = p;
+    K.touch(p);
+    if (!p.placementDone) placementIntro(); else childHome();
+  }
+
+  // ---------- בית של ילדה ----------
+  function childHome() {
+    topbar({ back: welcome, parent: true });
+    const p = cur;
+    const village = K.introduced(p).length;
+    const greet = p.sessions === 0 ? `שלום ${p.name}! מוכנה להכיר אות חדשה?` : K.pick([`שלום ${p.name}! איזה כיף שחזרת!`, `היי ${p.name}! נוגה התגעגעה אלייך!`, `${p.name}! בואי נשחק עם האותיות!`]);
+    screen(`
+      <div class="player" style="pointer-events:none"><span class="av">${p.avatar}</span><span class="nm">${esc(p.name)}</span></div>
+      ${owlSays(greet)}
+      <button class="btn huge pulse" id="play">▶ בואי נשחק!</button>
+      <button class="btn white" id="village">🏡 הכפר שלי ${village ? `<small style="opacity:.6">(${village})</small>` : ''}</button>
+    `);
+    speak(greet);
+    $('#play').onclick = () => { K.unlockAudio(); K.sfx.tap(); runSession(); };
+    $('#village').onclick = () => { K.sfx.tap(); villageScreen(); };
+  }
+
+  // ---------- בוחן פתיחה סמוי: עפיפונים ----------
+  function placementIntro() {
+    topbar({ back: welcome });
+    const t = `שלום ${cur.name}! בואי נעיף עפיפונים! אני אגיד אות, ואת תלחצי על העפיפון שלה. אם את לא יודעת, זה בסדר גמור, פשוט לוחצים על עפיפון.`;
+    screen(`${owlSays(`שלום ${cur.name}! בואי נעיף עפיפונים!`)}<div class="sky-field">${[0, 1, 2].map((i) => `<div class="kite">${K.kite(i)}</div>`).join('')}</div><button class="btn huge pulse" id="go">🪁 מתחילות</button>`);
+    speak(t);
+    $('#go').onclick = () => { K.unlockAudio(); K.sfx.tap(); placement(); };
+  }
+
+  async function placement() {
+    const p = cur;
+    const results = {}, wordRes = [];
+    let errors = 0, asked = 0;
+    const MAX = 16;
+    const cheer = ['יופי!', 'וואו, איזה עפיפון!', 'הוא עף!', 'שיגור!', 'למעלה למעלה!'];
+    topbar({ back: welcome, progress: [0, MAX] });
+
+    const kiteRound = (labels, prompt, isEmoji) => new Promise((resolve) => {
+      const id = screen(`${owlSays(prompt.text)}<div class="sky-field">${labels.map((l, i) => `<button class="kite" data-v="${esc(l.v)}" aria-label="${esc(l.v)}">${K.kite(i + asked)}<div class="k-letter${isEmoji ? ' emoji' : ''}">${l.show}</div></button>`).join('')}</div>`);
+      speak(prompt.speak);
+      $$('.kite').forEach((b) => (b.onclick = () => {
+        if (!alive(id)) return;
+        $$('.kite').forEach((x) => (x.onclick = null));
+        K.sfx.whoosh();
+        b.classList.add('fly');
+        K.say(K.pick(cheer));
+        setTimeout(() => resolve(b.dataset.v), 1100);
+      }));
+    });
+
+    for (const ch of K.PLACEMENT_ORDER) {
+      if (asked >= MAX || errors >= 4) break;
+      const info = K.LETTERS[ch];
+      const others = K.shuffle(K.ORDER.filter((x) => x !== ch && !K.SIMILAR.some((g) => g.includes(x) && g.includes(ch)))).slice(0, 2);
+      const opts = K.shuffle([ch, ...others]).map((x) => ({ v: x, show: x }));
+      setProgress(asked, MAX);
+      const ans = await kiteRound(opts, { text: `איפה ${info.name}?`, speak: `איפה האות ${info.name}?` });
+      results[ch] = ans === ch;
+      if (!results[ch]) errors++;
+      asked++;
+    }
+    const right = Object.values(results).filter(Boolean).length;
+    // מילים – רק למי שמכירה הרבה אותיות
+    if (right >= 9) {
+      const fsw = K.shuffle(K.WORDS.filter((w) => results[w.w[0]] && w.w.length <= 4)).slice(0, 3);
+      for (const w of fsw) {
+        const others = K.shuffle(Object.keys(results).filter((x) => results[x] && x !== w.w[0])).slice(0, 2);
+        const opts = K.shuffle([w.w[0], ...others]).map((x) => ({ v: x, show: x }));
+        const ans = await kiteRound(opts, { text: `${w.e}  באיזו אות מתחילה ${w.w}?`, speak: `${w.w}. באיזו אות מתחילה המילה ${w.w}?` });
+        wordRes.push(ans === w.w[0]);
+      }
+      if (wordRes.filter(Boolean).length >= 2) {
+        const rw = K.shuffle(K.BUILD.filter((w) => K.wordInfo(w))).slice(0, 3);
+        for (const w of rw) {
+          const others = K.shuffle(K.WORDS.filter((x) => x.w !== w && x.w[0] !== w[0])).slice(0, 2);
+          const opts = K.shuffle([K.wordInfo(w), ...others]).map((x) => ({ v: x.w, show: x.e }));
+          const ans = await kiteRound(opts, { text: `מה כתוב כאן?  ${w}`, speak: 'מה כתוב כאן? לחצי על התמונה.' }, true);
+          wordRes.push(ans === w);
+        }
+      }
+    }
+    K.applyPlacement(p, results, wordRes);
+    topbar({ home: true });
+    screen(`${owlSays('וואו! כל העפיפונים בשמיים!', 'happy')}<div class="sky-field" style="min-height:20vh"></div><button class="btn huge" id="go">▶ ממשיכות</button>`);
+    K.sfx.fanfare(); confetti();
+    speak(`וואו ${p.name}! כל העפיפונים בשמיים! עכשיו בואי נכיר את כפר האותיות.`);
+    $('#go').onclick = () => { K.sfx.tap(); runSession(); };
+  }
+
+  // ---------- מפגש ----------
+  async function runSession() {
+    const p = cur;
+    const plan = K.planSession(p);
+    const stats = { total: 0, right: 0 };
+    const steps = (plan.lesson ? 5 : 0) + (plan.finalLesson ? 2 : 0) + plan.items.length;
+    let si = 0;
+    const tick = () => setProgress(si++, steps);
+    topbar({ home: true, progress: [0, steps] });
+
+    if (plan.lesson) await lesson(p, plan.lesson, tick);
+    if (plan.finalLesson) await finalLesson(p, plan.finalLesson, tick);
+    for (const it of plan.items) {
+      tick();
+      const ok = await runItem(p, it);
+      if (ok === null) return; // יצאו מהמסך
+      stats.total++; if (ok) stats.right++;
+    }
+    K.endSession(p, stats, plan.lesson || plan.finalLesson);
+    endScreen(p, plan.lesson || plan.finalLesson);
+  }
+
+  function runItem(p, it) {
+    switch (it.type) {
+      case 'pick': return pickItem(p, it.ch);
+      case 'balloons': return balloonsItem(p, it.ch);
+      case 'first': return firstSoundItem(p, it.word);
+      case 'discriminate': return discriminateItem(p, it.pair, it.ch);
+      case 'build': return buildItem(p, it.word);
+      case 'read': return readItem(p, it.word);
+    }
+    return Promise.resolve(true);
+  }
+
+  const nameOf = (ch) => (K.LETTERS[ch] ? K.LETTERS[ch].name : K.FINALS[ch].name);
+  const soundOf = (ch) => (K.LETTERS[ch] ? K.LETTERS[ch].sound : K.LETTERS[K.FINALS[ch].base].sound);
+  const nextBtn = (label = 'הלאה') => `<button class="btn next-btn" id="next">${label} ⬅</button>`;
+  const waitNext = (id) => new Promise((r) => { $('#next').onclick = () => { if (alive(id)) { K.sfx.tap(); r(); } }; });
+
+  // ---------- שיעור אות חדשה ----------
+  async function lesson(p, ch, tick) {
+    const L = K.LETTERS[ch];
+    const r = K.rec(p, ch);
+    r.intro = true; r.s = Math.max(r.s, 0.6); K.store.save();
+    const twin = ch === 'ל' && ['יובל', 'עלמה'].includes(p.name);
+
+    // 1. סיפור הדמות
+    tick();
+    let id = screen(`
+      <p class="say big">${twin ? 'אות התאומות!' : 'אות חדשה בכפר!'}</p>
+      <div class="hero pop" id="hero">${K.letterArt(ch, 0)}</div>
+      <p class="say">${esc(L.story)}</p>
+      ${nextBtn()}`);
+    K.sfx.magic();
+    speak([twin ? 'זאת אות מיוחדת: היא נמצאת גם בשם יובל וגם בשם עלמה!' : 'יש אות חדשה בכפר!', L.story]);
+    await waitNext(id);
+
+    // 2. הציור הופך לאות (האנימציה היחידה שמוצדקת דידקטית)
+    tick();
+    id = screen(`
+      <div class="pair-hero"><div class="hero" id="hero">${K.letterArt(ch, 0)}</div><div class="font-twin hidden-twin" id="twin">${K.letterArt(ch, 3)}</div></div>
+      <p class="say big">${L.name}: ${L.sound}… ${L.sound}… ${L.word}</p>
+      ${nextBtn()}`);
+    let nx = waitNext(id);
+    await wait(900);
+    if (!alive(id)) return nx;
+    $('#hero').classList.add('morph');
+    await wait(1300);
+    if (!alive(id)) return nx;
+    $('#twin').classList.remove('hidden-twin');
+    const t2 = [`זאת האות ${L.name}.`, `היא אומרת ${L.sound}. ${L.sound}.`, `כמו ${L.word}.`];
+    speak(t2, () => { $('#hero')?.classList.remove('morph'); setTimeout(() => $('#hero')?.classList.add('morph'), 900); K.sayAll(t2); });
+    await nx;
+
+    // 3. תנועת גוף + איך הפה זז
+    tick();
+    id = screen(`
+      <div class="move-box">${K.mouthArt(L.mouth)}<div class="move-emoji">🙌</div></div>
+      <p class="say big">${esc(L.move)}</p>
+      <p class="say">ועכשיו כולן אומרות: ${L.sound}!</p>
+      <p class="parent-tip"><b>להורים:</b> עשו את התנועה יחד מול המסך. ${K.MOUTH_TIP[L.mouth]}. אפשר לקבל גם תשובה בהברה ("${L.sound}").</p>
+      ${nextBtn()}`);
+    speak([`עכשיו נעשה ביחד: ${L.move}.`, `ונגיד ${L.sound}! ${L.sound}!`]);
+    await waitNext(id);
+
+    // 4. כתיבה חופשית באצבע (לא מעקב על קו מנוקד – ג׳יימס ואנגלהרדט 2012)
+    tick();
+    await writeStep(p, ch);
+
+    // 5. איפה מתחבאת?
+    tick();
+    await huntStep(p, ch);
+  }
+
+  function writeStep(p, ch) {
+    return new Promise((resolve) => {
+      const L = K.LETTERS[ch] || K.FINALS[ch];
+      const id = screen(`
+        <p class="say big">עכשיו את! כתבי ${L.name} באצבע</p>
+        <div class="write-area">
+          <div class="write-model" id="model">${K.letterTrace(ch)}</div>
+          <canvas class="pad" id="pad" width="600" height="600" aria-label="לוח כתיבה"></canvas>
+        </div>
+        <div class="row"><button class="btn white" id="again">🧽 מוחקים</button><button class="btn white" id="show">👀 שוב</button><button class="btn" id="done">✓ סיימתי</button></div>`);
+      speak(`תראי איך כותבים ${L.name}. עכשיו את! כתבי ${L.name} באצבע, על הלוח.`);
+      const cv = $('#pad'), cx = cv.getContext('2d');
+      let drawing = false, pts = 0, last = null;
+      const pos = (e) => { const b = cv.getBoundingClientRect(); return [(e.clientX - b.left) * (cv.width / b.width), (e.clientY - b.top) * (cv.height / b.height)]; };
+      cx.lineCap = 'round'; cx.lineJoin = 'round'; cx.lineWidth = 34; cx.strokeStyle = '#3b2a6b';
+      cv.onpointerdown = (e) => { drawing = true; last = pos(e); cv.setPointerCapture(e.pointerId); cx.beginPath(); cx.arc(last[0], last[1], 17, 0, 7); cx.fillStyle = '#3b2a6b'; cx.fill(); };
+      cv.onpointermove = (e) => { if (!drawing) return; const pt = pos(e); cx.beginPath(); cx.moveTo(last[0], last[1]); cx.lineTo(pt[0], pt[1]); cx.stroke(); last = pt; pts++; };
+      cv.onpointerup = cv.onpointercancel = () => { drawing = false; };
+      $('#again').onclick = () => { K.sfx.tap(); cx.clearRect(0, 0, cv.width, cv.height); pts = 0; };
+      $('#show').onclick = () => { K.sfx.tap(); $('#model').innerHTML = K.letterTrace(ch); };
+      $('#done').onclick = async () => {
+        if (!alive(id)) return;
+        if (pts < 6) { K.say(`נסי לכתוב ${L.name} על הלוח`); return; }
+        K.sfx.good(); confetti(30);
+        await K.say(K.pick(['איזו אות יפה!', 'כתבת בעצמך! כל הכבוד!', 'וואו, איזו כתיבה!']));
+        resolve();
+      };
+    });
+  }
+
+  function huntStep(p, ch) {
+    return new Promise((resolve) => {
+      const L = K.LETTERS[ch];
+      const others = K.shuffle(K.ORDER.filter((x) => x !== ch && !K.SIMILAR.some((g) => g.includes(x) && g.includes(ch)))).slice(0, 5);
+      const cells = K.shuffle([ch, ch, ch, ...others]);
+      const id = screen(`
+        <div class="row"><div class="write-model">${K.letterArt(ch, 0)}</div><p class="say big">איפה מתחבאת ${L.name}?<br><span class="say">יש שלוש!</span></p></div>
+        <div class="hunt">${cells.map((c) => `<button data-c="${c}">${c}</button>`).join('')}</div>`);
+      speak(`איפה מתחבאת ${L.name}? יש שלוש. מצאי את כולן!`);
+      let found = 0;
+      $$('.hunt button').forEach((b) => (b.onclick = async () => {
+        if (!alive(id) || b.classList.contains('found')) return;
+        if (b.dataset.c === ch) {
+          b.classList.add('found'); found++; K.sfx.good();
+          if (found === 3) { await K.say(`מצאת את כל ה${L.name}!`); resolve(); } else K.say(K.pick(['מצאת!', 'עוד אחת!', 'יופי!']));
+        } else {
+          b.classList.remove('bad'); void b.offsetWidth; b.classList.add('bad'); K.sfx.soft();
+          K.say(`זאת ${nameOf(b.dataset.c)}.`);
+        }
+      }));
+    });
+  }
+
+  // ---------- שיעור אות סופית ----------
+  async function finalLesson(p, f, tick) {
+    const F = K.FINALS[f], B = K.LETTERS[F.base];
+    K.rec(p, f).intro = true; K.rec(p, f).s = Math.max(K.rec(p, f).s, 1); K.store.save();
+    tick();
+    let id = screen(`
+      <p class="say big">${B.name} בסוף המילה</p>
+      <div class="pair-hero"><div class="hero">${K.letterArt(F.base, 0)}</div><div class="say big">⬅</div><div class="hero pop">${K.letterArt(f, 2)}</div></div>
+      <p class="say">${esc(F.story)}</p>${nextBtn()}`);
+    speak([`זוכרות את ${B.name}?`, F.story, `זאת ${F.name}.`]);
+    await waitNext(id);
+    tick();
+    await writeStep(p, f);
+  }
+
+  // ---------- פריטי תרגול ----------
+  // בחירת אות: "איפה ה___?"
+  function pickItem(p, ch) {
+    return new Promise((resolve) => {
+      const isFinal = !!K.FINALS[ch];
+      const n = K.choiceCount(p);
+      const sup = K.supportFor(p, ch);
+      let opts;
+      if (isFinal) opts = K.shuffle([ch, K.FINALS[ch].base, ...K.shuffle(Object.keys(K.FINALS).filter((x) => x !== ch)).slice(0, Math.max(0, n - 2))]);
+      else opts = K.shuffle([ch, ...K.distractors(p, ch, n - 1)]);
+      const L = K.LETTERS[ch];
+      const prompt = isFinal ? `איפה ${K.FINALS[ch].name}?` : `איפה ${L.name}?`;
+      const sayIt = isFinal ? [prompt] : sup <= 1 ? [prompt, `${L.sound}… כמו ${L.word}`] : [prompt, `${L.sound}…`];
+      const id = screen(`<p class="say big">${prompt}</p><div class="cards n${opts.length}">${opts.map((o) => `<button class="card" data-c="${o}" aria-label="${o}">${K.letterArt(o, isFinal ? 2 : sup)}</button>`).join('')}</div>`);
+      speak(sayIt);
+      choiceLogic(id, p, ch, sup, resolve, async (btn) => {
+        if (!isFinal) { btn.innerHTML = K.letterArt(ch, 0); }
+        await K.say(`${K.pick(PRAISE)} ${isFinal ? '' : `${L.sound}, ${L.word}!`}`);
+      });
+    });
+  }
+
+  // לוגיקה משותפת לבחירה בין כרטיסים: טעות → אומרים מה נבחר, שתי טעויות → מדגישים את הנכונה
+  function choiceLogic(id, p, ch, sup, resolve, onGood, recordFn) {
+    let tries = 0, done = false;
+    $$('.card').forEach((b) => (b.onclick = async () => {
+      if (!alive(id) || done) return;
+      const c = b.dataset.c;
+      if (c === ch) {
+        done = true;
+        if (tries === 0) (recordFn || ((ok) => K.record(p, ch, ok, null, sup)))(true);
+        b.classList.add('good'); K.sfx.good();
+        $$('.card').forEach((x) => x !== b && x.classList.add('dim'));
+        await onGood(b);
+        await wait(350);
+        resolve(tries === 0);
+      } else {
+        if (tries === 0) (recordFn || ((ok, chosen) => K.record(p, ch, ok, chosen, sup)))(false, c);
+        tries++;
+        b.classList.remove('bad'); void b.offsetWidth; b.classList.add('bad'); K.sfx.soft();
+        if (tries >= 2) {
+          const g = $(`.card[data-c="${ch}"]`); g && g.classList.add('hint');
+          await K.say(`זאת ${nameOf(c)}. ה${nameOf(ch)} כאן!`);
+        } else await K.say(`זאת ${nameOf(c)}. בואי ננסה שוב.`);
+      }
+    }));
+  }
+
+  // בלונים: מפוצצות את האות שנאמרה (3 פעמים)
+  function balloonsItem(p, ch) {
+    return new Promise((resolve) => {
+      const L = K.LETTERS[ch] || null;
+      const nm = nameOf(ch);
+      const id = screen(`<p class="say big">פוצצי את הבלונים של ${nm}!</p><div class="counter">${'<span>🎈</span>'.repeat(3)}</div><div class="balloon-field" id="bf"></div>`);
+      speak(L ? [`פוצצי את הבלונים של ${nm}!`, `${L.sound}…`] : [`פוצצי את הבלונים של ${nm}!`]);
+      const field = $('#bf');
+      const pool = K.introduced(p).filter((x) => x !== ch && !K.SIMILAR.some((g) => g.includes(x) && g.includes(ch)));
+      const fill = pool.length >= 2 ? pool : K.ORDER.filter((x) => x !== ch).slice(0, 6);
+      let popped = 0, miss = 0, n = 0, recorded = false, timer;
+      const H = () => field.clientHeight || 400;
+      function spawn(forceTarget) {
+        if (!alive(id)) return clearInterval(timer);
+        const isT = forceTarget || Math.random() < 0.42;
+        const c = isT ? ch : K.pick(fill);
+        const b = document.createElement('button');
+        b.className = 'balloon'; b.dataset.c = c;
+        b.innerHTML = K.balloon(n++) + `<div class="b-letter">${c}</div>`;
+        b.style.left = `${5 + Math.random() * 78}%`;
+        const dur = 6 + Math.random() * 3;
+        b.style.animationDuration = `${dur}s`;
+        // הבלונים הראשונים כבר באמצע הדרך, כדי שהמסך לא יתחיל ריק
+        if (n <= 3) b.style.animationDelay = `-${(dur * (0.2 + 0.15 * n)).toFixed(1)}s`;
+        b.style.setProperty('--rise', `${-(H() + 200)}px`);
+        b.onclick = () => {
+          if (!alive(id) || b.classList.contains('popped')) return;
+          if (b.dataset.c === ch) {
+            b.classList.add('popped'); K.sfx.pop(); popped++;
+            $$('.counter span')[popped - 1]?.classList.add('on');
+            if (popped >= 3) {
+              clearInterval(timer);
+              if (!recorded) K.record(p, ch, miss === 0, null, 3);
+              K.sfx.good();
+              K.say(`${K.pick(PRAISE)} פוצצת את כל הבלונים!`).then(() => resolve(miss === 0));
+            }
+          } else {
+            b.classList.remove('wobble'); void b.offsetWidth; b.classList.add('wobble'); K.sfx.soft();
+            if (!miss && !recorded) { K.record(p, ch, false, b.dataset.c, 3); recorded = true; }
+            miss++;
+            K.say(`זה ${nameOf(b.dataset.c)}.`);
+          }
+        };
+        b.addEventListener('animationend', (e) => { if (e.animationName === 'rise') b.remove(); });
+        field.appendChild(b);
+      }
+      spawn(true); setTimeout(() => spawn(), 600);
+      timer = setInterval(() => { if (field.childElementCount < 7) spawn($$('.balloon', field).filter((x) => x.dataset.c === ch && !x.classList.contains('popped')).length === 0); }, 1100);
+    });
+  }
+
+  // צליל פותח: "באיזו אות מתחילה ___?"
+  function firstSoundItem(p, word) {
+    return new Promise((resolve) => {
+      const info = K.wordInfo(word), ch = word[0];
+      const sup = Math.max(2, K.supportFor(p, ch));
+      const opts = K.shuffle([ch, ...K.distractors(p, ch, K.choiceCount(p) - 1)]);
+      const id = screen(`
+        <button class="pic-btn" id="pic"><span class="pic">${info.e}</span></button>
+        <p class="say big">באיזו אות מתחילה ${word}?</p>
+        <div class="cards n${opts.length}">${opts.map((o) => `<button class="card" data-c="${o}">${K.letterArt(o, sup)}</button>`).join('')}</div>`);
+      const t = [`${word}.`, `באיזו אות מתחילה המילה ${word}?`];
+      speak(t);
+      $('#pic').onclick = () => K.say(word);
+      choiceLogic(id, p, ch, sup, resolve, async () => {
+        await K.say(`${K.pick(PRAISE)} ${word} מתחילה ב${K.LETTERS[ch].name}. ${K.LETTERS[ch].sound}… ${word}!`);
+      });
+    });
+  }
+
+  // הבחנה בין אותיות דומות + הסבר הפרט המבדיל
+  function discriminateItem(p, pair, ch) {
+    return new Promise((resolve) => {
+      const sup = Math.max(2, K.supportFor(p, ch));
+      const opts = K.shuffle(pair.slice());
+      const L = K.LETTERS[ch];
+      const id = screen(`<p class="say big">איפה ${L.name}?</p><div class="cards">${opts.map((o) => `<button class="card" data-c="${o}">${K.letterArt(o, sup)}</button>`).join('')}</div><p class="say" id="hint"></p>`);
+      speak([`איפה ${L.name}?`, `${L.sound}…`]);
+      choiceLogic(id, p, ch, sup, resolve, async () => {
+        $$('.card').forEach((b) => { b.classList.remove('dim'); b.innerHTML = K.letterArt(b.dataset.c, 0); });
+        const key = pair.slice().sort().join('|');
+        const h = K.HINTS[key] || K.HINTS[pair.join('|')] || K.HINTS[[pair[1], pair[0]].join('|')];
+        if (h) $('#hint').textContent = h;
+        await K.sayAll([K.pick(PRAISE), h].filter(Boolean));
+        await wait(500);
+      });
+    });
+  }
+
+  // בניית מילה: שומעים את המילה ומסדרים אותיות (מימין לשמאל)
+  function buildItem(p, word) {
+    return new Promise((resolve) => {
+      const info = K.wordInfo(word);
+      const letters = Array.from(word);
+      const extra = K.shuffle(K.introduced(p).filter((x) => !letters.includes(x))).slice(0, letters.length >= 4 ? 1 : 2);
+      const tiles = K.shuffle([...letters, ...extra]);
+      const id = screen(`
+        <button class="pic-btn" id="pic"><span class="pic">${info ? info.e : '❓'}</span></button>
+        <p class="say big">בואי נכתוב: ${word}</p>
+        <div class="slots">${letters.map((_, i) => `<div class="slot${i === 0 ? ' next' : ''}" data-i="${i}"></div>`).join('')}</div>
+        <div class="tiles">${tiles.map((t, i) => `<button class="tile" data-c="${t}" data-k="${i}">${t}</button>`).join('')}</div>`);
+      const soundHint = (i) => { const b = K.baseOf(letters[i]); return K.LETTERS[b] ? K.LETTERS[b].sound : ''; };
+      speak([`בואי נכתוב ${word}.`, `מה השמיעה הראשונה? ${soundHint(0)}…`], () => K.sayAll([word, `${soundHint(pos)}…`]));
+      $('#pic').onclick = () => K.say(word);
+      let pos = 0, mistakes = 0;
+      $$('.tile').forEach((b) => (b.onclick = async () => {
+        if (!alive(id) || b.classList.contains('used')) return;
+        const need = letters[pos];
+        if (b.dataset.c === need) {
+          K.sfx.pop();
+          b.classList.add('used');
+          const s = $(`.slot[data-i="${pos}"]`); s.textContent = need; s.classList.remove('next'); s.classList.add('filled');
+          pos++;
+          if (pos < letters.length) {
+            $(`.slot[data-i="${pos}"]`).classList.add('next');
+            K.say(`${soundHint(pos)}…`);
+          } else {
+            K.recordWord(p, mistakes <= 1);
+            letters.forEach((c) => { const bc = K.baseOf(c); if (K.LETTERS[bc]) K.rec(p, bc).s = Math.min(6, K.rec(p, bc).s + 0.15); });
+            K.store.save();
+            K.sfx.good(); confetti(25);
+            await K.sayAll([`${K.pick(PRAISE)} כתבת ${word}!`]);
+            await wait(300);
+            resolve(mistakes <= 1);
+          }
+        } else {
+          mistakes++;
+          const bc = K.baseOf(need);
+          if (mistakes === 1 && K.LETTERS[bc]) K.record(p, bc, false, K.baseOf(b.dataset.c), 3);
+          b.classList.remove('bad'); void b.offsetWidth; b.classList.add('bad'); K.sfx.soft();
+          await K.say(`זאת ${nameOf(K.baseOf(b.dataset.c))}. אנחנו צריכות ${soundHint(pos)}…`);
+        }
+      }));
+    });
+  }
+
+  // קריאת מילה: רואים מילה ובוחרים תמונה. אפשר ללחוץ על אות ולשמוע את הצליל שלה.
+  function readItem(p, word) {
+    return new Promise((resolve) => {
+      const info = K.wordInfo(word);
+      const others = K.shuffle(K.WORDS.filter((x) => x.w !== word && x.w[0] !== word[0] && x.e !== info.e)).slice(0, 2);
+      const opts = K.shuffle([info, ...others]);
+      const id = screen(`
+        <p class="say big">מה כתוב כאן?</p>
+        <div class="word-big">${Array.from(word).map((c) => `<span data-c="${c}">${c}</span>`).join('')}</div>
+        <div class="pics">${opts.map((o) => `<button data-w="${o.w}" aria-label="${o.w}">${o.e}</button>`).join('')}</div>
+        <p class="note">אפשר ללחוץ על אות כדי לשמוע אותה</p>`);
+      speak('מה כתוב כאן? אפשר ללחוץ על כל אות ולשמוע אותה.');
+      $$('.word-big span').forEach((s) => (s.onclick = () => {
+        $$('.word-big span').forEach((x) => x.classList.remove('lit')); s.classList.add('lit');
+        const b = K.baseOf(s.dataset.c); if (K.LETTERS[b]) K.say(K.LETTERS[b].sound);
+      }));
+      let tries = 0, done = false;
+      $$('.pics button').forEach((b) => (b.onclick = async () => {
+        if (!alive(id) || done) return;
+        if (b.dataset.w === word) {
+          done = true;
+          if (tries === 0) K.recordWord(p, true);
+          b.classList.add('good'); K.sfx.good();
+          await K.say(`${K.pick(PRAISE)} כתוב ${word}!`);
+          await wait(300);
+          resolve(tries === 0);
+        } else {
+          if (tries === 0) K.recordWord(p, false);
+          tries++;
+          b.classList.remove('bad'); void b.offsetWidth; b.classList.add('bad'); K.sfx.soft();
+          if (tries >= 2) { $(`.pics button[data-w="${word}"]`).classList.add('hint'); await K.say(`זה ${b.dataset.w}. כאן כתוב ${word}.`); }
+          else await K.say(`זה ${b.dataset.w}. נסי שוב. ${K.LETTERS[K.baseOf(word[0])]?.sound || ''}…`);
+        }
+      }));
+    });
+  }
+
+  // ---------- סיום מפגש ----------
+  function endScreen(p, newCh) {
+    topbar({ home: true });
+    const fresh = newCh && K.LETTERS[newCh];
+    const tips = parentIdeas(p, newCh);
+    screen(`
+      ${owlSays(fresh ? `${K.LETTERS[newCh].word} עבר לגור בכפר שלך!` : 'איזה משחק! נוגה הולכת לנוח', 'sleep')}
+      ${newCh ? `<div class="hero pop" style="width:clamp(180px,34vmin,280px)">${K.letterArt(newCh, K.LETTERS[newCh] ? 0 : 2)}</div>` : ''}
+      <div class="row"><button class="btn white" id="village">🏡 לכפר שלי</button><button class="btn teal" id="home">🏠 הביתה</button></div>
+      <p class="parent-tip"><b>רעיון להורים:</b> ${esc(tips)}</p>`);
+    K.sfx.fanfare(); confetti();
+    speak([`כל הכבוד ${p.name}!`, fresh ? `ה${K.LETTERS[newCh].word} עבר לגור בכפר האותיות שלך.` : 'שיחקת יפה מאוד.', 'נוגה הולכת לנוח. נתראה מחר!']);
+    $('#village').onclick = () => { K.sfx.tap(); villageScreen(newCh); };
+    $('#home').onclick = () => { K.sfx.tap(); childHome(); };
+  }
+
+  function parentIdeas(p, ch) {
+    const L = ch && K.LETTERS[ch];
+    const conf = topConfusion(p);
+    const ideas = [];
+    if (L) ideas.push(`חפשו יחד את האות ${ch} בשלטים בדרך לגן, ועשו את התנועה: ${L.move}.`);
+    if (L) ideas.push(`שאלו "מה עוד מתחיל בצליל ${L.sound}?" ותנו כמה דוגמאות.`);
+    if (conf) ideas.push(`${p.name} מתבלבלת לפעמים בין ${conf[0]} ל${conf[1]}. ציירו את שתיהן ודברו על מה שמבדיל ביניהן.`);
+    ideas.push('כתבו את האות בחול, בקצף גילוח או בפלסטלינה.');
+    return ideas[0] + (ideas[1] ? ' ' + ideas[1] : '');
+  }
+  function topConfusion(p) {
+    let best = null, n = 0;
+    for (const ch of K.ORDER) {
+      const r = K.rec(p, ch);
+      for (const [o, c] of Object.entries(r.conf || {})) if (c > n) { n = c; best = [ch, o]; }
+    }
+    return n >= 2 ? best : null;
+  }
+
+  // ---------- הכפר ----------
+  function villageScreen(highlight) {
+    topbar({ back: childHome });
+    const p = cur;
+    const intro = K.introduced(p);
+    const empties = K.ORDER.length - intro.length;
+    const fins = Object.keys(K.FINALS).filter((f) => K.rec(p, f).intro);
+    screen(`
+      <p class="say big">כפר האותיות של ${esc(p.name)}</p>
+      <div class="village">
+        ${intro.map((ch, i) => {
+          const f = fins.find((x) => K.FINALS[x].base === ch);
+          return `<button class="house${ch === highlight ? ' enter' : ''}" data-c="${ch}" style="--h:${HOUSE_COLORS[i % HOUSE_COLORS.length]}" aria-label="${K.LETTERS[ch].word}">${K.letterArt(ch, 0)}${f ? `<span class="fin">${f}</span>` : ''}</button>`;
+        }).join('')}
+        ${'<div class="house empty">?</div>'.repeat(empties)}
+      </div>`);
+    speak(intro.length ? 'לחצי על בית, ותשמעי מי גר בו.' : 'הכפר מחכה לאותיות!');
+    $$('.house[data-c]').forEach((b) => (b.onclick = () => {
+      const L = K.LETTERS[b.dataset.c];
+      K.sfx.tap();
+      b.classList.remove('enter'); void b.offsetWidth; b.classList.add('enter');
+      K.sayAll([`${L.name}. ${L.sound}. ${L.word}.`]);
+    }));
+  }
+
+  // ---------- משחקות ביחד ----------
+  function coopSetup() {
+    const placed = K.profiles().filter((p) => p.placementDone);
+    if (placed.length === 2) return coopRun(placed[0], placed[1]);
+    topbar({ back: welcome });
+    const sel = [];
+    screen(`${owlSays('מי משחקת ביחד? בחרו שתיים')}<div class="players">${placed.map((p) => `<button class="player" data-id="${p.id}"><span class="av">${p.avatar}</span><span class="nm">${esc(p.name)}</span></button>`).join('')}</div>`);
+    speak('מי משחקת ביחד? בחרו שתיים.');
+    $$('.player').forEach((b) => (b.onclick = () => {
+      K.sfx.pop(); b.style.boxShadow = '0 0 0 6px var(--coral)';
+      if (!sel.includes(b.dataset.id)) sel.push(b.dataset.id);
+      if (sel.length === 2) coopRun(K.getProfile(sel[0]), K.getProfile(sel[1]));
+    }));
+  }
+
+  async function coopRun(a, b) {
+    cur = null;
+    const items = K.planCoop(a, b, 6);
+    const RB = ['#ff5c5c', '#ff9f3d', '#ffd84a', '#7bd36b', '#4fb3e8', '#7c6bff', '#c86bff'];
+    const n = items.length;
+    const rainbowHtml = (k) => `<div class="rainbow">${Array.from({ length: n }, (_, i) => `<i style="${i < k ? `background:${RB[i % RB.length]}` : ''}"></i>`).join('')}</div>`;
+    topbar({ back: () => { cur = null; welcome(); } });
+    screen(`${owlSays(`${a.name} ו${b.name}, בונות ביחד קשת!`)}<div class="row"><span style="font-size:80px">${a.avatar}</span><span style="font-size:60px">🌈</span><span style="font-size:80px">${b.avatar}</span></div><button class="btn huge pulse" id="go">▶ מתחילות</button>`);
+    speak(`${a.name} ו${b.name}! משחקות בתורות, ובכל תשובה בונות ביחד קשת.`);
+    await new Promise((r) => ($('#go').onclick = () => { K.unlockAudio(); K.sfx.tap(); r(); }));
+    for (let i = 0; i < n; i++) {
+      const it = items[i], who = it.who === a.id ? a : b;
+      topbar({ back: () => { cur = null; welcome(); } });
+      $('#topbar .grow').innerHTML = rainbowHtml(i);
+      const id = screen(`<div class="turn"><span class="av">${who.avatar}</span> תור של ${esc(who.name)}!</div>`);
+      await K.say(`תור של ${who.name}!`);
+      await wait(400);
+      if (!alive(id)) return;
+      const ok = await runItem(who, it);
+      if (ok === null) return;
+    }
+    $('#topbar .grow').innerHTML = rainbowHtml(n);
+    screen(`${owlSays('בניתן ביחד קשת שלמה!')}<div class="row"><span style="font-size:80px">${a.avatar}</span><span style="font-size:100px">🌈</span><span style="font-size:80px">${b.avatar}</span></div><button class="btn teal" id="home">🏠 הביתה</button>`);
+    K.sfx.fanfare(); confetti(90);
+    speak(`וואו! ${a.name} ו${b.name} בנו ביחד קשת שלמה! איזה צוות!`);
+    [a, b].forEach((p) => { p.lastPlayed = Date.now(); }); K.store.save();
+    $('#home').onclick = () => { K.sfx.tap(); welcome(); };
+  }
+
+  // ---------- אזור הורים ----------
+  function parentGate() {
+    const back = cur ? childHome : welcome;
+    topbar({ back, speaker: false });
+    screen(`<p class="say big">אזור הורים</p><button class="gate-btn" id="gate" aria-label="להחזיק 3 שניות"><span class="fill"></span>🔒</button><p class="note">כדי להיכנס, לוחצים על המנעול ומחזיקים 3 שניות.</p>`);
+    const g = $('#gate'); let t;
+    const start = (e) => { e.preventDefault(); g.classList.add('holding'); t = setTimeout(() => parentArea(), 3000); };
+    const stop = () => { g.classList.remove('holding'); clearTimeout(t); };
+    g.onpointerdown = start; g.onpointerup = g.onpointerleave = g.onpointercancel = stop;
+    g.onkeydown = (e) => { if (e.key === 'Enter') parentArea(); };
+  }
+
+  function parentArea(selId) {
+    const back = cur ? childHome : welcome;
+    topbar({ back, speaker: false });
+    const profs = K.profiles();
+    const p = (selId && K.getProfile(selId)) || cur || profs[0];
+    const st = K.store.load().settings;
+    let body = '';
+    if (p) {
+      const intro = K.introduced(p), known = K.knownLetters(p), mast = K.masteredLetters(p);
+      const recent = p.history.slice(-5);
+      const acc = recent.reduce((a, h) => a + h.right, 0) / Math.max(1, recent.reduce((a, h) => a + h.total, 0));
+      const confs = [];
+      for (const ch of K.ORDER) for (const [o, c] of Object.entries(K.rec(p, ch).conf || {})) if (c >= 1) confs.push([ch, o, c]);
+      confs.sort((x, y) => y[2] - x[2]);
+      const next = K.nextNewLetter(p);
+      const cell = (ch) => {
+        const r = K.rec(p, ch);
+        const cls = !r.intro && r.s === 0 ? '' : r.s < 2 ? 's1' : r.s < 3.5 ? 's2' : r.s < 5 ? 's3' : 's4';
+        return `<div class="lcell ${cls}"><span class="ch">${ch}</span><small>${r.n ? `${r.c}/${r.n}` : '–'}</small></div>`;
+      };
+      body = `
+        <h2>${p.avatar} ${esc(p.name)}</h2>
+        <div class="stat-row">
+          <div class="stat"><b>שלב ${K.stage(p)}</b><span>${K.STAGE_NAMES[K.stage(p)]}</span></div>
+          <div class="stat"><b>${known.length}/22</b><span>אותיות מוכרות</span></div>
+          <div class="stat"><b>${mast.length}</b><span>יציבות בלי ציור</span></div>
+          <div class="stat"><b>${p.sessions}</b><span>מפגשים</span></div>
+          <div class="stat"><b>${recent.length ? Math.round(acc * 100) + '%' : '–'}</b><span>הצלחה ב-5 מפגשים אחרונים</span></div>
+        </div>
+        <p>${next ? `האות הבאה שתילמד: <b style="font-size:22px">${next}</b> (${K.LETTERS[next].word}).` : 'כל 22 האותיות הוצגו. עכשיו יש חזרה, אותיות סופיות ומילים.'}
+        ${p.placement ? ` בבוחן הפתיחה: ${p.placement.right} מתוך ${p.placement.tested} אותיות, מילים ${p.placement.words}.` : ''}</p>
+        <h3>מצב האותיות (נכון/ניסיונות)</h3>
+        <div class="lgrid">${K.ORDER.map(cell).join('')}</div>
+        <div class="lgrid" style="margin-top:8px">${Object.keys(K.FINALS).map(cell).join('')}</div>
+        <div class="legend"><span><i style="background:#f0eef5"></i>עוד לא</span><span><i style="background:#ffe1dc"></i>חדשה</span><span><i style="background:#fff0c7"></i>בדרך</span><span><i style="background:#dff5d8"></i>מוכרת</span><span><i style="background:#b9ebb0"></i>יציבה</span></div>
+        <h3>בלבולים</h3>
+        <p>${confs.length ? confs.slice(0, 6).map(([a, b, c]) => `<b>${a}</b> במקום <b>${b}</b>: ${c} פעמים`).join(' · ') : 'אין בלבולים חוזרים כרגע.'}</p>
+        <h3>שלב (אוטומטי לפי ההתקדמות)</h3>
+        <div class="prow">${['auto', 1, 2, 3, 4].map((s) => `<button class="pbtn${(p.stageOverride || 'auto') === s ? ' on' : ''}" data-stage="${s}">${s === 'auto' ? 'אוטומטי' : 'שלב ' + s}</button>`).join('')}</div>
+        <h3>גיבוי והעברה למכשיר אחר</h3>
+        <div class="prow"><button class="pbtn" id="exp">יצירת קוד גיבוי</button></div>
+        <textarea id="exp-code" readonly hidden aria-label="קוד גיבוי"></textarea>
+        <div class="prow"><button class="pbtn" id="replace">בוחן פתיחה מחדש</button><button class="pbtn danger" id="del">מחיקת ${esc(p.name)}</button></div>
+        <div id="confirm"></div>`;
+    }
+    screen(`<div class="parent">
+      <div class="ptabs">${profs.map((x) => `<button data-id="${x.id}" class="${p && x.id === p.id ? 'on' : ''}">${x.avatar} ${esc(x.name)}</button>`).join('')}</div>
+      ${body || '<p>עדיין אין שחקניות.</p>'}
+      <h3>הגדרות</h3>
+      <div class="prow">אורך מפגש: ${[[8, 'קצר'], [12, 'רגיל'], [16, 'ארוך']].map(([n, l]) => `<button class="pbtn${st.items === n ? ' on' : ''}" data-items="${n}">${l}</button>`).join('')}</div>
+      <div class="prow">קריינות: <button class="pbtn${st.voice !== false ? ' on' : ''}" data-voice="1">פועלת</button><button class="pbtn${st.voice === false ? ' on' : ''}" data-voice="0">כבויה</button><button class="pbtn" id="test-voice">בדיקת קול</button></div>
+      ${K.hasHebrewVoice() ? '' : '<p style="color:#a2321c">לא נמצא במכשיר קול בעברית. באייפד: הגדרות ← נגישות ← תוכן מוקרא ← קולות ← עברית. בינתיים אפשר להקריא לילדות את הטקסט שעל המסך.</p>'}
+      <h3>שחזור מקוד גיבוי</h3>
+      <textarea id="imp-code" aria-label="הדבקת קוד גיבוי" placeholder="מדביקים כאן קוד גיבוי"></textarea>
+      <div class="prow"><button class="pbtn" id="imp">שחזור</button><span id="imp-msg"></span></div>
+      <h3>איך המשחק בנוי</h3>
+      <ul>
+        <li><b>תומך זיכרון משובץ:</b> כל אות מצוירת כחלק מחפץ ששמו מתחיל בצליל שלה (ב בתוך בית, פ שהיא פיל). הציור דוהה בהדרגה עד שנשארת אות רגילה, והאות נחשבת יציבה רק כשמזהים אותה בלי ציור.</li>
+        <li><b>אות חדשה בכל מפגש,</b> עם חזרה מרווחת. אותיות שהיו בהן טעויות חוזרות יותר. קודם האותיות שבשמות (ל נמצאת גם ביובל וגם בעלמה), ואותיות דומות (ב/כ, ד/ר, ה/ח/ת) נלמדות במרחק זו מזו ואחר כך מתורגלות כזוג.</li>
+        <li><b>שם וצליל יחד.</b> תשובה בהברה ("לה") נחשבת נכונה. סופיות ומילים מגיעות בשלב מאוחר.</li>
+        <li><b>בלי תחרות:</b> הילדות לא רואות שלבים, ניקוד או השוואה. לכל אחת כפר משלה. במשחק ביחד בונים קשת משותפת.</li>
+        <li><b>10–15 דקות ביום</b> מספיקות. המפגש נגמר כשנוגה הולכת לנוח. כדאי לשבת ליד הילדות ולעשות יחד את התנועות.</li>
+      </ul>
+    </div>`);
+    $$('.ptabs button').forEach((b) => (b.onclick = () => parentArea(b.dataset.id)));
+    $$('[data-items]').forEach((b) => (b.onclick = () => { st.items = +b.dataset.items; K.store.save(); parentArea(p && p.id); }));
+    $$('[data-voice]').forEach((b) => (b.onclick = () => { st.voice = b.dataset.voice === '1'; K.store.save(); parentArea(p && p.id); }));
+    $('#test-voice').onclick = () => { K.unlockAudio(); K.say('שלום! אני נוגה הינשופה. בֵּית, בָּה, בַּיִת.'); };
+    $('#imp').onclick = () => {
+      try { const np = K.importProfile($('#imp-code').value); $('#imp-msg').textContent = `שוחזר: ${np.name}`; setTimeout(() => parentArea(np.id), 700); }
+      catch (e) { $('#imp-msg').textContent = 'הקוד לא תקין. בדקו שהעתקתם את כולו.'; }
+    };
+    if (!p) return;
+    $$('[data-stage]').forEach((b) => (b.onclick = () => { const v = b.dataset.stage; p.stageOverride = v === 'auto' ? null : +v; K.store.save(); parentArea(p.id); }));
+    $('#exp').onclick = async () => {
+      const ta = $('#exp-code'); ta.hidden = false; ta.value = K.exportProfile(p); ta.select();
+      try { await navigator.clipboard.writeText(ta.value); $('#exp').textContent = 'הקוד הועתק ✓'; } catch (e) { $('#exp').textContent = 'סמנו והעתיקו את הקוד'; }
+    };
+    $('#replace').onclick = () => {
+      $('#confirm').innerHTML = `<div class="prow">לעשות שוב את בוחן הפתיחה? הנתונים הקיימים יתעדכנו לפי התוצאות. <button class="pbtn on" id="yes-pl">כן</button><button class="pbtn" id="no-c">ביטול</button></div>`;
+      $('#yes-pl').onclick = () => { cur = p; p.placementDone = false; K.store.save(); placementIntro(); };
+      $('#no-c').onclick = () => ($('#confirm').innerHTML = '');
+    };
+    $('#del').onclick = () => {
+      $('#confirm').innerHTML = `<div class="prow">למחוק את ${esc(p.name)} וכל ההתקדמות? אי אפשר לבטל. <button class="pbtn danger" id="yes-del">מחיקה</button><button class="pbtn" id="no-c">ביטול</button></div>`;
+      $('#yes-del').onclick = () => { K.deleteProfile(p.id); if (cur && cur.id === p.id) cur = null; parentArea(); };
+      $('#no-c').onclick = () => ($('#confirm').innerHTML = '');
+    };
+  }
+
+  // ---------- התחלה ----------
+  function boot() {
+    const clouds = Array.from({ length: 5 }, (_, i) =>
+      `<div class="cloud" style="top:${6 + i * 9}vh;width:${90 + i * 25}px;height:${28 + i * 6}px;animation-duration:${55 + i * 18}s;animation-delay:${-i * 17}s"></div>`).join('');
+    $('#world').innerHTML = `<div class="sun-bg"></div>${clouds}
+      <svg class="hills" viewBox="0 0 1000 260" preserveAspectRatio="none"><path d="M0 140 Q180 40 380 120 T760 100 T1000 110 V260 H0Z" fill="#a6e38a"/><path d="M0 190 Q220 110 470 180 T1000 160 V260 H0Z" fill="#8fd86f"/><path d="M0 230 Q300 180 600 225 T1000 215 V260 H0Z" fill="#6cc257"/></svg>`;
+    welcome();
+  }
+  K.boot = boot;
+  document.addEventListener('DOMContentLoaded', boot);
+})();
+</script>
+<script>
+  // עבודה בלי אינטרנט (רק כשהדף רץ מאתר אמיתי, לא בתוך מסגרת)
+  if ('serviceWorker' in navigator && location.protocol === 'https:' && window.top === window.self) {
+    window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+  }
+</script>
+</body>
+</html>

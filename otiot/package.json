@@ -1,0 +1,9 @@
+{
+  "name": "kfar-otiot",
+  "private": true,
+  "version": "1.0.0",
+  "description": "כפר האותיות – משחק לימוד אותיות ומילים בעברית לגן חובה",
+  "scripts": {
+    "build": "node build.mjs"
+  }
+}
