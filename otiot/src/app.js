@@ -757,7 +757,7 @@
         <div class="lgrid" style="margin-top:8px">${Object.keys(K.FINALS).map(cell).join('')}</div>
         <div class="legend"><span><i style="background:#f0eef5"></i>עוד לא</span><span><i style="background:#ffe1dc"></i>חדשה</span><span><i style="background:#fff0c7"></i>בדרך</span><span><i style="background:#dff5d8"></i>מוכרת</span><span><i style="background:#b9ebb0"></i>יציבה</span></div>
         <h3>בלבולים</h3>
-        <p>${confs.length ? confs.slice(0, 6).map(([a, b, c]) => `<b>${a}</b> במקום <b>${b}</b>: ${c} פעמים`).join(' · ') : 'אין בלבולים חוזרים כרגע.'}</p>
+        <p>${confs.length ? confs.slice(0, 6).map(([a, b, c]) => `בחרה <b>${b}</b> במקום <b>${a}</b>: ${c === 1 ? 'פעם אחת' : c + ' פעמים'}`).join(' · ') : 'אין בלבולים חוזרים כרגע.'}</p>
         <h3>שלב (אוטומטי לפי ההתקדמות)</h3>
         <div class="prow">${['auto', 1, 2, 3, 4].map((s) => `<button class="pbtn${(p.stageOverride || 'auto') === s ? ' on' : ''}" data-stage="${s}">${s === 'auto' ? 'אוטומטי' : 'שלב ' + s}</button>`).join('')}</div>
         <h3>גיבוי והעברה למכשיר אחר</h3>

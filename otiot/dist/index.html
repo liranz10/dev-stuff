@@ -69,7 +69,10 @@ button:focus-visible, input:focus-visible { outline: 4px solid var(--sun); outli
 .progress i { width: 14px; height: 14px; border-radius: 50%; background: rgba(255, 255, 255, .8); box-shadow: inset 0 0 0 2px var(--card-edge); transition: background .3s, transform .3s; }
 .progress i.done { background: var(--sun); box-shadow: inset 0 0 0 2px #e8a514; }
 .progress i.now { transform: scale(1.35); background: #fff; box-shadow: inset 0 0 0 3px var(--coral); }
-#stage { flex: 1; min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 8px 16px calc(env(safe-area-inset-bottom, 0px) + 16px); gap: 14px; overflow-y: auto; }
+#stage { flex: 1; min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding: 8px 16px calc(env(safe-area-inset-bottom, 0px) + 16px); gap: 14px; overflow-y: auto; }
+/* מרכוז שלא חותך את ראש המסך כשהתוכן ארוך */
+#stage > :first-child { margin-top: auto; }
+#stage > :last-child { margin-bottom: auto; }
 .enter { animation: enter .45s cubic-bezier(.2, 1.4, .4, 1) both; }
 @keyframes enter { from { opacity: 0; transform: translateY(24px) scale(.97); } }
 
@@ -1879,7 +1882,7 @@ canvas.pad { width: clamp(240px, 52vmin, 420px); aspect-ratio: 1; background: #f
         <div class="lgrid" style="margin-top:8px">${Object.keys(K.FINALS).map(cell).join('')}</div>
         <div class="legend"><span><i style="background:#f0eef5"></i>עוד לא</span><span><i style="background:#ffe1dc"></i>חדשה</span><span><i style="background:#fff0c7"></i>בדרך</span><span><i style="background:#dff5d8"></i>מוכרת</span><span><i style="background:#b9ebb0"></i>יציבה</span></div>
         <h3>בלבולים</h3>
-        <p>${confs.length ? confs.slice(0, 6).map(([a, b, c]) => `<b>${a}</b> במקום <b>${b}</b>: ${c} פעמים`).join(' · ') : 'אין בלבולים חוזרים כרגע.'}</p>
+        <p>${confs.length ? confs.slice(0, 6).map(([a, b, c]) => `בחרה <b>${b}</b> במקום <b>${a}</b>: ${c === 1 ? 'פעם אחת' : c + ' פעמים'}`).join(' · ') : 'אין בלבולים חוזרים כרגע.'}</p>
         <h3>שלב (אוטומטי לפי ההתקדמות)</h3>
         <div class="prow">${['auto', 1, 2, 3, 4].map((s) => `<button class="pbtn${(p.stageOverride || 'auto') === s ? ' on' : ''}" data-stage="${s}">${s === 'auto' ? 'אוטומטי' : 'שלב ' + s}</button>`).join('')}</div>
         <h3>גיבוי והעברה למכשיר אחר</h3>
