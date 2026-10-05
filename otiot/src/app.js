@@ -34,6 +34,7 @@
 
   function screen(html) {
     screenId++;
+    clearTimeout(idleT);
     K.stopSpeech();
     const st = $('#stage');
     st.innerHTML = html;
@@ -43,9 +44,15 @@
   }
   const alive = (id) => id === screenId;
 
+  // אם לא נוגעים במסך 12 שניות – ההוראה מוקראת שוב (פעם אחת)
+  let idleT = null;
+  document.addEventListener('pointerdown', () => clearTimeout(idleT), true);
   function speak(text, extra) {
     repeatFn = () => (Array.isArray(text) ? K.sayAll(text) : K.say(text));
     if (extra) repeatFn = extra;
+    const id = screenId;
+    clearTimeout(idleT);
+    idleT = setTimeout(() => { if (alive(id) && repeatFn) repeatFn(); }, 12000);
     return Array.isArray(text) ? K.sayAll(text) : K.say(text);
   }
 
@@ -137,20 +144,88 @@
   }
 
   // ---------- בית של ילדה ----------
-  function childHome() {
+  // ---------- מפת המסע: התקדמות גלויה, אישית, בלי מספרים ----------
+  // תחנה לכל אות שפגשה (לפי סדר הפגישה), ואחריהן תחנות "?" שעוד מחכות. האזורים פותחים משחקים חדשים.
+  const AREA_AT = [0, 5, 12, 20];
+  function metOrder(p) {
+    return K.introduced(p).slice().sort((a, b) => (K.rec(p, a).introAt ?? 0) - (K.rec(p, b).introAt ?? 0) || K.ORDER.indexOf(a) - K.ORDER.indexOf(b))
+      .concat(Object.keys(K.FINALS).filter((f) => K.rec(p, f).intro));
+  }
+  function journeyHtml(p, upto) {
+    const met = metOrder(p).slice(0, upto ?? 99);
+    const N = K.ORDER.length + Object.keys(K.FINALS).length;
+    const STEP = 104, BANNER = 86, PAD = 70;
+    const pts = [];
+    let y = PAD;
+    const banners = [];
+    for (let i = 0; i < N; i++) {
+      const a = AREA_AT.indexOf(i);
+      if (a >= 0) { banners.push({ a, y }); y += BANNER; }
+      pts.push({ x: 50 + 30 * Math.sin(i * 0.9), y });
+      y += STEP;
+    }
+    const H = y + 20;
+    const cur = Math.min(met.length, N - 1);
+    const reachedArea = AREA_AT.filter((t) => met.length >= t).length - 1;
+    const bandOf = (ai) => { const top = banners[ai].y - 20, bot = ai + 1 < banners.length ? banners[ai + 1].y - 20 : H; return [top, bot]; };
+    const bands = K.AREAS.map((A, ai) => { const [t, b] = bandOf(ai); return `<div class="j-band" style="bottom:${t}px;height:${b - t}px;background:${A.color}"></div>`; }).join('');
+    const path = `<svg class="j-path" viewBox="0 0 100 ${H}" preserveAspectRatio="none"><polyline points="${pts.map((q) => `${q.x},${H - q.y}`).join(' ')}" fill="none" stroke="#fff" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke" stroke-dasharray="2 26"/></svg>`;
+    const bannerHtml = banners.map(({ a, y: by }) => {
+      const A = K.AREAS[a], open = a <= reachedArea;
+      return `<div class="j-banner${open ? '' : ' locked'}" style="bottom:${by - 10}px"><span>${A.icon}</span>${A.name}${open ? '' : ' 🔒'}</div>`;
+    }).join('');
+    const stations = pts.map((q, i) => {
+      const ch = met[i];
+      const isFin = ch && K.FINALS[ch];
+      const inner = ch ? K.letterArt(ch, isFin ? 2 : 0) : `<span class="j-q">${i === cur ? '✨' : '?'}</span>`;
+      return `<button class="j-st${ch ? ' met' : ''}${i === cur ? ' next' : ''}" data-c="${ch || ''}" style="left:${q.x}%;bottom:${q.y - 40}px">${inner}</button>`;
+    }).join('');
+    const me = pts[cur];
+    const avatar = `<div class="j-me" id="j-me" style="left:calc(${me.x}% + ${me.x > 50 ? -86 : 46}px);bottom:${me.y - 10}px">${p.avatar}</div>`;
+    return { html: `<div class="journey" id="journey"><div class="j-map" style="height:${H}px">${bands}${path}${bannerHtml}${stations}${avatar}</div></div>`, curY: me.y, H };
+  }
+  function scrollJourney(curY, H) {
+    const j = $('#journey'); if (!j) return;
+    j.scrollTop = Math.max(0, H - curY - j.clientHeight * 0.55);
+  }
+
+  function childHome(opts = {}) {
     topbar({ back: welcome, parent: true });
     const p = cur;
-    const village = K.introduced(p).length;
-    const greet = p.sessions === 0 ? `שלום ${p.name}! מוכנה להכיר אות חדשה?` : K.pick([`שלום ${p.name}! איזה כיף שחזרת!`, `היי ${p.name}! נוגה התגעגעה אלייך!`, `${p.name}! בואי נשחק עם האותיות!`]);
+    const met = metOrder(p).length;
+    const greet = opts.greet || (p.sessions === 0 ? `שלום ${p.name}! זאת המפה שלך. בכל משחק את מתקדמת בדרך ופוגשת חברים חדשים!` : K.pick([`שלום ${p.name}! לאן נגיע היום?`, `היי ${p.name}! נוגה התגעגעה! ממשיכות בדרך?`, `${p.name}! חברים חדשים מחכים לך בדרך!`]));
+    const prev = opts.from != null ? opts.from : null;
+    const J = journeyHtml(p, prev != null ? prev : undefined);
     screen(`
-      <div class="player" style="pointer-events:none"><span class="av">${p.avatar}</span><span class="nm">${esc(p.name)}</span></div>
-      ${owlSays(greet)}
-      <button class="btn huge pulse" id="play">▶ בואי נשחק!</button>
-      <button class="btn white" id="village">🏡 הכפר שלי ${village ? `<small style="opacity:.6">(${village})</small>` : ''}</button>
+      <div class="j-top"><span class="av">${p.avatar}</span><b>${esc(p.name)}</b><span class="j-say">${esc(greet)}</span></div>
+      ${J.html}
+      <div class="row j-actions"><button class="btn huge pulse" id="play">▶ יוצאות לדרך!</button><button class="btn white" id="village">🏡 הכפר</button></div>
     `);
+    requestAnimationFrame(() => scrollJourney(J.curY, J.H));
     speak(greet);
+    $$('.j-st.met').forEach((b) => (b.onclick = () => {
+      const c = b.dataset.c, L = K.LETTERS[c];
+      K.sfx.tap(); b.classList.remove('bounce'); void b.offsetWidth; b.classList.add('bounce');
+      if (L) K.say(`${L.name}. ${L.sound}. ${L.word}.`); else if (K.FINALS[c]) K.say(K.FINALS[c].name);
+    }));
     $('#play').onclick = () => { K.unlockAudio(); K.sfx.tap(); runSession(); };
     $('#village').onclick = () => { K.sfx.tap(); villageScreen(); };
+    // אחרי מפגש: הדמות של הילדה הולכת בדרך עד התחנה החדשה
+    if (prev != null && met > prev) {
+      setTimeout(() => {
+        const J2 = journeyHtml(p);
+        const tmp = document.createElement('div'); tmp.innerHTML = J2.html;
+        const map = $('.j-map'); if (!map) return;
+        const newMap = tmp.querySelector('.j-map');
+        // מעדכנים תחנות ומזיזים את הדמות עם אנימציה
+        $$('.j-st', map).forEach((st, i) => { const ns = newMap.querySelectorAll('.j-st')[i]; if (st.className !== ns.className) { st.outerHTML = ns.outerHTML.replace('class="j-st', 'class="j-st pop-in'); } });
+        const me = $('#j-me'), nme = newMap.querySelector('#j-me');
+        me.style.left = nme.style.left; me.style.bottom = nme.style.bottom;
+        K.sfx.magic();
+        setTimeout(() => scrollJourney(J2.curY, J2.H), 300);
+        $$('.j-st.met').forEach((b) => (b.onclick = () => { const L = K.LETTERS[b.dataset.c]; if (L) K.say(`${L.name}. ${L.sound}. ${L.word}.`); }));
+      }, 900);
+    }
   }
 
   // ---------- בוחן פתיחה סמוי: עפיפונים ----------
@@ -218,8 +293,8 @@
     topbar({ home: true });
     screen(`${owlSays('וואו! כל העפיפונים בשמיים!', 'happy')}<div class="sky-field" style="min-height:20vh"></div><button class="btn huge" id="go">▶ ממשיכות</button>`);
     K.sfx.fanfare(); confetti();
-    speak(`וואו ${p.name}! כל העפיפונים בשמיים! עכשיו בואי נכיר את כפר האותיות.`);
-    $('#go').onclick = () => { K.sfx.tap(); runSession(); };
+    speak(`וואו ${p.name}! כל העפיפונים בשמיים! עכשיו בואי נראה את המפה שלך.`);
+    $('#go').onclick = () => { K.sfx.tap(); childHome(); };
   }
 
   // ---------- מפגש ----------
@@ -227,11 +302,13 @@
     const p = cur;
     const plan = K.planSession(p);
     const stats = { total: 0, right: 0 };
-    const steps = (plan.lesson ? 5 : 0) + (plan.finalLesson ? 2 : 0) + plan.items.length;
+    const metBefore = metOrder(p).length, stageBefore = K.stage(p);
+    const steps = (plan.lesson ? 5 : 0) + plan.meet.length + (plan.finalLesson ? 2 : 0) + plan.items.length;
     let si = 0;
     const tick = () => setProgress(si++, steps);
     topbar({ home: true, progress: [0, steps] });
 
+    for (const ch of plan.meet) await meetStep(p, ch, tick);
     if (plan.lesson) await lesson(p, plan.lesson, tick);
     if (plan.finalLesson) await finalLesson(p, plan.finalLesson, tick);
     for (const it of plan.items) {
@@ -241,7 +318,44 @@
       stats.total++; if (ok) stats.right++;
     }
     K.endSession(p, stats, plan.lesson || plan.finalLesson);
-    endScreen(p, plan.lesson || plan.finalLesson);
+    await endScreen(p, [...plan.meet, plan.lesson, plan.finalLesson].filter(Boolean));
+    if (K.stage(p) > stageBefore) await areaUnlocked(p, K.stage(p));
+    childHome({ from: metBefore, greet: `כל הכבוד ${p.name}! התקדמת בדרך!` });
+  }
+
+  // אזור חדש במפה = סוג משחק חדש. חגיגה קטנה ולא מספר.
+  function areaUnlocked(p, stage) {
+    return new Promise((resolve) => {
+      const A = K.AREAS.find((a) => a.stage === stage);
+      if (!A) return resolve();
+      const id = screen(`
+        <p class="say big">הגעת למקום חדש במפה!</p>
+        <div class="area-card pop" style="background:${A.color}"><span class="area-icon">${A.icon}</span><b>${A.name}</b></div>
+        <p class="say">כאן ${A.game}.</p>
+        ${nextBtn('יש!')}`);
+      K.sfx.fanfare(); confetti(90);
+      speak([`וואו ${p.name}! הגעת ל${A.name}!`, `כאן ${A.game}.`]);
+      waitNext(id).then(resolve);
+    });
+  }
+
+  // היכרות קצרה עם הדמות של אות שהילדה כבר יודעת – כדי שגם לה יהיה תומך זיכרון
+  async function meetStep(p, ch, tick) {
+    const L = K.LETTERS[ch];
+    tick();
+    K.introduce(p, ch);
+    const id = screen(`
+      <p class="say big">חבר חדש בדרך!</p>
+      <div class="pair-hero"><div class="hero pop" id="hero">${K.letterArt(ch, 0)}</div><div class="font-twin hidden-twin" id="twin">${K.letterArt(ch, 3)}</div></div>
+      <p class="say big">${L.name} היא ${L.word}</p>
+      <p class="say">${esc(L.story)}</p>
+      ${nextBtn()}`);
+    const nx = waitNext(id);
+    K.sfx.magic();
+    const t = [`את כבר מכירה את ${L.name}! תראי מה מסתתר בה.`, L.story];
+    speak(t, () => { $('#hero')?.classList.remove('morph'); setTimeout(() => $('#hero')?.classList.add('morph'), 1200); K.sayAll(t); });
+    setTimeout(() => { if (!alive(id)) return; $('#hero').classList.add('morph'); setTimeout(() => alive(id) && $('#twin').classList.remove('hidden-twin'), 1200); }, 3200);
+    await nx;
   }
 
   function runItem(p, it) {
@@ -264,8 +378,7 @@
   // ---------- שיעור אות חדשה ----------
   async function lesson(p, ch, tick) {
     const L = K.LETTERS[ch];
-    const r = K.rec(p, ch);
-    r.intro = true; r.s = Math.max(r.s, 0.6); K.store.save();
+    K.introduce(p, ch);
     const twin = ch === 'ל' && ['יובל', 'עלמה'].includes(p.name);
 
     // 1. סיפור הדמות
@@ -407,14 +520,27 @@
   }
 
   // לוגיקה משותפת לבחירה בין כרטיסים: טעות → אומרים מה נבחר, שתי טעויות → מדגישים את הנכונה
+  // מחזירים את הציורים לכל הכרטיסים (רמז / אחרי טעות)
+  function revealPictures() {
+    $$('.card').forEach((b) => { if (K.LETTERS[b.dataset.c] && !b.classList.contains('shown')) { b.innerHTML = K.letterArt(b.dataset.c, 0); b.classList.add('shown'); } });
+  }
   function choiceLogic(id, p, ch, sup, resolve, onGood, recordFn) {
-    let tries = 0, done = false;
+    let tries = 0, done = false, hinted = false;
+    if (sup > 0 && K.LETTERS[ch]) {
+      $('#stage').insertAdjacentHTML('beforeend', `<button class="hint-btn" id="hint-btn" aria-label="רמז">💡 רמז</button>`);
+      $('#hint-btn').onclick = () => {
+        if (!alive(id) || done) return;
+        K.sfx.magic(); hinted = true; revealPictures(); $('#hint-btn').remove();
+        K.say(`רמז: ${nameOf(ch)} היא ${K.LETTERS[ch].word}.`);
+      };
+    }
     $$('.card').forEach((b) => (b.onclick = async () => {
       if (!alive(id) || done) return;
       const c = b.dataset.c;
       if (c === ch) {
         done = true;
-        if (tries === 0) (recordFn || ((ok) => K.record(p, ch, ok, null, sup)))(true);
+        if (tries === 0) (recordFn || ((ok) => K.record(p, ch, ok, null, hinted ? 0 : sup)))(true);
+        $('#hint-btn')?.remove();
         b.classList.add('good'); K.sfx.good();
         $$('.card').forEach((x) => x !== b && x.classList.add('dim'));
         await onGood(b);
@@ -424,10 +550,13 @@
         if (tries === 0) (recordFn || ((ok, chosen) => K.record(p, ch, ok, chosen, sup)))(false, c);
         tries++;
         b.classList.remove('bad'); void b.offsetWidth; b.classList.add('bad'); K.sfx.soft();
+        // אחרי טעות – חוזרים לתומך הזיכרון: הציורים חוזרים לכל הכרטיסים
+        revealPictures(); $('#hint-btn')?.remove();
+        const cw = K.LETTERS[c] ? ` של ${K.LETTERS[c].word}` : '';
         if (tries >= 2) {
           const g = $(`.card[data-c="${ch}"]`); g && g.classList.add('hint');
-          await K.say(`זאת ${nameOf(c)}. ה${nameOf(ch)} כאן!`);
-        } else await K.say(`זאת ${nameOf(c)}. בואי ננסה שוב.`);
+          await K.say(`זאת ${nameOf(c)}${cw}. ה${nameOf(ch)} כאן!`);
+        } else await K.say(K.LETTERS[ch] ? `זאת ${nameOf(c)}${cw}. אנחנו מחפשות את ${nameOf(ch)}, ה${K.LETTERS[ch].word}. נסי שוב!` : `זאת ${nameOf(c)}. נסי שוב!`);
       }
     }));
   }
@@ -508,13 +637,13 @@
       const sup = Math.max(2, K.supportFor(p, ch));
       const opts = K.shuffle(pair.slice());
       const L = K.LETTERS[ch];
-      const id = screen(`<p class="say big">איפה ${L.name}?</p><div class="cards">${opts.map((o) => `<button class="card" data-c="${o}">${K.letterArt(o, sup)}</button>`).join('')}</div><p class="say" id="hint"></p>`);
+      const id = screen(`<p class="say big">איפה ${L.name}?</p><div class="cards">${opts.map((o) => `<button class="card" data-c="${o}">${K.letterArt(o, sup)}</button>`).join('')}</div><p class="say" id="diff-hint"></p>`);
       speak([`איפה ${L.name}?`, `${L.sound}…`]);
       choiceLogic(id, p, ch, sup, resolve, async () => {
         $$('.card').forEach((b) => { b.classList.remove('dim'); b.innerHTML = K.letterArt(b.dataset.c, 0); });
         const key = pair.slice().sort().join('|');
         const h = K.HINTS[key] || K.HINTS[pair.join('|')] || K.HINTS[[pair[1], pair[0]].join('|')];
-        if (h) $('#hint').textContent = h;
+        if (h && $('#diff-hint')) $('#diff-hint').textContent = h;
         await K.sayAll([K.pick(PRAISE), h].filter(Boolean));
         await wait(500);
       });
@@ -606,19 +735,21 @@
   }
 
   // ---------- סיום מפגש ----------
-  function endScreen(p, newCh) {
-    topbar({ home: true });
-    const fresh = newCh && K.LETTERS[newCh];
-    const tips = parentIdeas(p, newCh);
-    screen(`
-      ${owlSays(fresh ? `${K.LETTERS[newCh].word} עבר לגור בכפר שלך!` : 'איזה משחק! נוגה הולכת לנוח', 'sleep')}
-      ${newCh ? `<div class="hero pop" style="width:clamp(180px,34vmin,280px)">${K.letterArt(newCh, K.LETTERS[newCh] ? 0 : 2)}</div>` : ''}
-      <div class="row"><button class="btn white" id="village">🏡 לכפר שלי</button><button class="btn teal" id="home">🏠 הביתה</button></div>
-      <p class="parent-tip"><b>רעיון להורים:</b> ${esc(tips)}</p>`);
-    K.sfx.fanfare(); confetti();
-    speak([`כל הכבוד ${p.name}!`, fresh ? `ה${K.LETTERS[newCh].word} עבר לגור בכפר האותיות שלך.` : 'שיחקת יפה מאוד.', 'נוגה הולכת לנוח. נתראה מחר!']);
-    $('#village').onclick = () => { K.sfx.tap(); villageScreen(newCh); };
-    $('#home').onclick = () => { K.sfx.tap(); childHome(); };
+  function endScreen(p, newChs) {
+    return new Promise((resolve) => {
+      topbar({ home: true });
+      const letters = newChs.filter((c) => K.LETTERS[c]);
+      const words = letters.map((c) => K.LETTERS[c].word);
+      const tips = parentIdeas(p, letters[letters.length - 1]);
+      const id = screen(`
+        ${owlSays(letters.length ? `${letters.length > 1 ? 'החברים החדשים מצטרפים' : 'החבר החדש מצטרף'} אלייך לדרך!` : 'איזה משחק! נוגה הולכת לנוח', 'sleep')}
+        ${newChs.length ? `<div class="row">${newChs.map((c) => `<div class="hero pop" style="width:clamp(120px,${newChs.length > 2 ? 18 : 30}vmin,260px)">${K.letterArt(c, K.LETTERS[c] ? 0 : 2)}</div>`).join('')}</div>` : ''}
+        ${nextBtn('למפה')}
+        <p class="parent-tip"><b>רעיון להורים:</b> ${esc(tips)}</p>`);
+      K.sfx.fanfare(); confetti();
+      speak([`כל הכבוד ${p.name}!`, words.length ? `${words.join(', ')} מצטרפים אלייך לדרך.` : 'שיחקת יפה מאוד.']);
+      waitNext(id).then(resolve);
+    });
   }
 
   function parentIdeas(p, ch) {

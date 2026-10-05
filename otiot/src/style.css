@@ -245,3 +245,33 @@ canvas.pad { width: clamp(240px, 52vmin, 420px); aspect-ratio: 1; background: #f
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
 }
+
+/* ---------- מפת המסע ---------- */
+.j-top { display: flex; align-items: center; gap: 10px; background: #fff; border-radius: 26px; padding: 8px 18px 8px 12px; box-shadow: 0 5px 0 var(--card-edge); max-width: min(760px, 100%); }
+.j-top .av { font-size: 40px; }
+.j-top b { font-size: 26px; white-space: nowrap; }
+.j-say { min-width: 0; font-size: clamp(16px, 2.6vmin, 22px); color: var(--ink-soft); line-height: 1.3; }
+.journey { flex: 1; min-height: 240px; width: min(760px, 100%); overflow-y: auto; border-radius: 32px; box-shadow: inset 0 0 0 4px rgba(255, 255, 255, .8), 0 8px 0 var(--card-edge); background: #fdfaf2; scroll-behavior: smooth; }
+.j-map { position: relative; width: 100%; }
+.j-band { position: absolute; left: 0; right: 0; opacity: .75; }
+.j-path { position: absolute; inset: 0; width: 100%; height: 100%; filter: drop-shadow(0 2px 0 rgba(59, 42, 107, .12)); }
+.j-banner { position: absolute; left: 50%; transform: translateX(-50%); background: #fff; border-radius: 999px; padding: 8px 22px; font-size: clamp(20px, 3.4vmin, 28px); font-weight: 700; box-shadow: 0 5px 0 rgba(59, 42, 107, .15); white-space: nowrap; display: flex; gap: 8px; align-items: center; z-index: 2; }
+.j-banner span { font-size: 1.3em; }
+.j-banner.locked { opacity: .55; filter: grayscale(.6); }
+.j-st { position: absolute; width: 84px; height: 84px; margin-left: -42px; border-radius: 50%; background: rgba(255, 255, 255, .7); border: 4px dashed rgba(59, 42, 107, .2); display: grid; place-items: center; padding: 4px; z-index: 1; }
+.j-st svg { width: 100%; height: 100%; }
+.j-st.met { background: #fff; border: 4px solid #fff; box-shadow: 0 6px 0 rgba(59, 42, 107, .18); }
+.j-st.next { border: 4px solid var(--coral); background: #fff6ea; animation: pulse 1.6s ease-in-out infinite; }
+.j-st.bounce { animation: hop .5s; }
+.j-st.pop-in { animation: heroPop .9s cubic-bezier(.2, 1.6, .4, 1) both; }
+.j-q { font-size: 34px; color: rgba(59, 42, 107, .35); font-weight: 700; }
+.j-me { position: absolute; font-size: 52px; z-index: 3; transition: left 1.6s ease-in-out, bottom 1.6s ease-in-out; filter: drop-shadow(0 4px 0 rgba(59, 42, 107, .2)); animation: owlbob 2s ease-in-out infinite; }
+.j-actions { padding-top: 4px; }
+
+/* רמז ואזור חדש */
+.hint-btn { font-size: 22px; padding: 10px 20px; border-radius: 999px; background: #fff7d1; box-shadow: 0 5px 0 #f0d77a; font-weight: 700; }
+.hint-btn:active { transform: translateY(3px); box-shadow: 0 2px 0 #f0d77a; }
+.area-card { width: clamp(220px, 44vmin, 360px); aspect-ratio: 1; border-radius: 40px; display: grid; place-items: center; align-content: center; gap: 6px; box-shadow: 0 10px 0 rgba(59, 42, 107, .15); }
+.area-card .area-icon { font-size: clamp(90px, 18vmin, 150px); line-height: 1; }
+.area-card b { font-size: clamp(28px, 5vmin, 44px); }
+.area-card.pop { animation: heroPop .9s cubic-bezier(.2, 1.6, .4, 1) both; }

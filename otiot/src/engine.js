@@ -11,6 +11,10 @@
     if (!mem || typeof mem !== 'object') mem = {};
     mem.profiles = mem.profiles || {};
     mem.settings = mem.settings || { items: 12, voice: true };
+    // הגירה מגרסה קודמת: אותיות שסומנו "הוכרו" בלי תאריך היכרות – מחזירים להן את הציור לשני מפגשים
+    for (const p of Object.values(mem.profiles)) {
+      for (const r of Object.values(p.letters || {})) if (r.intro && r.introAt == null) r.introAt = p.sessions || 0;
+    }
     return mem;
   }
   function save() {
@@ -49,13 +53,19 @@
   K.rec = rec;
 
   // דעיכת התומך: ככל שהאות יציבה יותר – פחות ציור
+  // הציור נשאר לפחות שני מפגשים אחרי ההיכרות, ודוהה רק כשהאות גם חזקה וגם "ותיקה"
   K.supportFor = function (p, ch) {
     const r = rec(p, ch);
     if (!K.LETTERS[ch]) return 2;
-    if (r.s < 1.5) return 0;
-    if (r.s < 2.8) return 1;
-    if (r.s < 4) return 2;
-    return 3;
+    if (!r.intro) return 0;
+    const age = p.sessions - (r.introAt ?? -99);
+    const byAge = age < 2 ? 0 : age < 4 ? 1 : age < 6 ? 2 : 3;
+    const byStrength = r.s < 1.5 ? 0 : r.s < 2.8 ? 1 : r.s < 4.2 ? 2 : 3;
+    return Math.min(byAge, byStrength);
+  };
+  K.introduce = function (p, ch) {
+    const r = rec(p, ch);
+    if (!r.intro) { r.intro = true; r.introAt = p.sessions; r.s = Math.max(r.s, 0.6); save(); }
   };
 
   K.record = function (p, ch, correct, chosen, support) {
@@ -81,7 +91,7 @@
   };
 
   K.introduced = (p) => K.ORDER.filter((ch) => rec(p, ch).intro);
-  K.knownLetters = (p) => K.ORDER.filter((ch) => rec(p, ch).intro && rec(p, ch).s >= 3.5);
+  K.knownLetters = (p) => K.ORDER.filter((ch) => rec(p, ch).s >= 3.5);
   K.masteredLetters = (p) => K.ORDER.filter((ch) => rec(p, ch).s >= 5);
 
   // שלב סמוי – לא מוצג לילדה בשום מקום, רק באזור ההורים
@@ -101,13 +111,14 @@
     // results: {ch: true/false}; אותיות שלא נבדקו – נשארות לא ידועות
     for (const [ch, ok] of Object.entries(results)) {
       const r = rec(p, ch);
-      if (ok) { r.s = 3.6; r.intro = true; } else { r.s = 0; }
+      // גם אות שהילדה כבר מכירה עוברת היכרות עם הדמות שלה – רק קצרה יותר
+      if (ok) { r.s = 3.6; r.pre = true; } else { r.s = 0; }
     }
     const tested = Object.keys(results).length;
     const right = Object.values(results).filter(Boolean).length;
     // מצליחה כמעט בהכול ונבדקו מעט – אותיות שלא נבדקו מקבלות "אולי"
     if (tested < K.ORDER.length && right >= tested - 1 && tested >= 12) {
-      K.ORDER.forEach((ch) => { if (!(ch in results)) { const r = rec(p, ch); r.s = 2; r.intro = true; } });
+      K.ORDER.forEach((ch) => { if (!(ch in results)) { const r = rec(p, ch); r.s = 2; r.pre = true; } });
     }
     const wr = wordResults.filter(Boolean).length;
     p.words.s = wr >= 4 ? 3 : wr >= 2 ? 1.5 : 0;
@@ -161,9 +172,19 @@
     return opts[opts.length - 1];
   }
 
+  // אות חדשה לגמרי (שיעור מלא) / אותיות שהילדה כבר יודעת ועוד לא פגשה את הדמות שלהן (היכרות קצרה)
   K.nextNewLetter = function (p) {
-    return K.ORDER.find((ch) => !rec(p, ch).intro) || null;
+    return K.ORDER.find((ch) => !rec(p, ch).intro && !rec(p, ch).pre) || null;
   };
+  K.toMeet = (p) => K.ORDER.filter((ch) => !rec(p, ch).intro && rec(p, ch).pre);
+
+  // אזורי המסע – כל אחד פותח סוג משחק חדש. מוצגים לילדה כמקומות במפה, בלי מספרים.
+  K.AREAS = [
+    { stage: 1, name: 'גן האותיות', icon: '🌷', color: '#bdf0a8', game: 'מכירות אותיות חדשות ומפוצצות בלונים' },
+    { stage: 2, name: 'נהר הצלילים', icon: '🌊', color: '#bfe6ff', game: 'שומעות מילה ומוצאות באיזו אות היא מתחילה' },
+    { stage: 3, name: 'גשר המילים', icon: '🌉', color: '#ffe3b8', game: 'בונות מילים מאותיות' },
+    { stage: 4, name: 'מגדל הסופיות', icon: '🏰', color: '#e6d9ff', game: 'אותיות שמותחות רגל בסוף המילה, וקוראות מילים' },
+  ];
   K.nextFinal = function (p) {
     return Object.keys(K.FINALS).find((f) => !rec(p, f).intro && rec(p, K.FINALS[f].base).s >= 3) || null;
   };
@@ -190,11 +211,17 @@
     const last = p.history[p.history.length - 1];
     const struggling = last && last.total >= 6 && last.right / last.total < 0.5;
     const nl = K.nextNewLetter(p);
+    plan.meet = [];
     if (opts.noLesson) { /* משחק ביחד – רק תרגול של מה שכבר נלמד */ }
-    else if (nl && !(struggling && K.introduced(p).length >= 3)) plan.lesson = nl;
-    else if (!nl && st >= 3) plan.finalLesson = K.nextFinal(p);
+    else {
+      plan.meet = K.toMeet(p).slice(0, nl ? 2 : 4);
+      if (nl && !(struggling && K.introduced(p).length >= 3)) plan.lesson = nl;
+      else if (!nl && !plan.meet.length && st >= 3) plan.finalLesson = K.nextFinal(p);
+    }
+    // מפגש עם היכרויות – פחות תרגול, כדי שיישאר קצר
+    if (plan.meet.length) nItems = Math.max(8, nItems - plan.meet.length - (plan.lesson ? 2 : 0));
 
-    const pool = K.introduced(p).concat(plan.lesson && !K.introduced(p).includes(plan.lesson) ? [plan.lesson] : []);
+    const pool = [...new Set([...K.introduced(p), ...(plan.lesson ? [plan.lesson] : []), ...plan.meet])];
     if (!pool.length) return plan;
 
     const types = [];
@@ -209,7 +236,7 @@
     const pairs = K.SIMILAR.filter(([a, b]) => K.LETTERS[a] && K.LETTERS[b] && rec(p, a).intro && rec(p, b).intro && rec(p, a).s >= 2 && rec(p, b).s >= 2);
     const finalsIntro = Object.keys(K.FINALS).filter((f) => rec(p, f).intro);
 
-    const recentLetters = [];
+    const recentLetters = [], usedWords = [];
     let newLetterCount = 0;
     const items = shuffle(types).map((t) => {
       if ((t === 'build' || t === 'read') && words.length < 2) t = 'pick';
@@ -234,7 +261,11 @@
         const pr = pairs.slice().sort((x, y) => (rec(p, x[0]).s + rec(p, x[1]).s) - (rec(p, y[0]).s + rec(p, y[1]).s))[0];
         return { type: t, pair: pr, ch: pick(pr) };
       }
-      return { type: t, word: pick(words) };
+      // בלי לחזור על אותה מילה באותו מפגש
+      const fresh = words.filter((w) => !usedWords.includes(w));
+      const w = pick(fresh.length ? fresh : words);
+      usedWords.push(w);
+      return { type: t, word: w };
     });
     // הבטחה שהאות החדשה מופיעה לפחות פעמיים
     if (plan.lesson) {
